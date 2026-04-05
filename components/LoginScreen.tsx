@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { signIn } from 'next-auth/react'
 import { saveGuestSession, saveLang } from '@/lib/storage'
 import type { GuestSession } from '@/lib/types'
 import Logo from './Logo'
@@ -12,7 +13,7 @@ interface LoginScreenProps {
 
 function randomGuestId(): string {
   const animals = ['Lion', 'Tiger', 'Bear', 'Wolf', 'Eagle', 'Shark', 'Panda', 'Fox', 'Hawk', 'Lynx', 'Orca', 'Stag']
-  const emojis: Record<string, string> = { Lion: '🦁', Tiger: '🐯', Bear: '🐻', Wolf: '🐺', Eagle: '🦅', Shark: '🦈', Panda: '🐼', Fox: '🦊', Hawk: '🦅', Lynx: '🐱', Orca: '🐋', Stag: '🦌' }
+  const emojis: Record<string, string> = { Lion: 'ð¦', Tiger: 'ð¯', Bear: 'ð»', Wolf: 'ðº', Eagle: 'ð¦', Shark: 'ð¦', Panda: 'ð¼', Fox: 'ð¦', Hawk: 'ð¦', Lynx: 'ð±', Orca: 'ð', Stag: 'ð¦' }
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let tag = ''
   for (let i = 0; i < 5; i++) tag += chars[Math.floor(Math.random() * chars.length)]
@@ -35,18 +36,18 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       comingSoon: 'Coming Soon',
       divider: 'or',
       guest: 'Continue as Guest',
-      guestNote: 'No account needed · Data saved on this device',
+      guestNote: 'No account needed Â· Data saved on this device',
     },
     zh: {
-      tagline: 'AI 每日飲食教練',
-      sub: '根據你的身體數據，生成個人化三餐',
-      phone: '以電話號碼繼續',
-      email: '以 Email 繼續',
-      google: '以 Google 繼續',
-      comingSoon: '即將推出',
-      divider: '或',
-      guest: '以訪客身份繼續',
-      guestNote: '不需要帳號・資料儲存在此裝置',
+      tagline: 'AI æ¯æ¥é£²é£æç·´',
+      sub: 'æ ¹æä½ çèº«é«æ¸æï¼çæåäººåä¸é¤',
+      phone: 'ä»¥é»è©±èç¢¼ç¹¼çº',
+      email: 'ä»¥ Email ç¹¼çº',
+      google: 'ä»¥ Google ç¹¼çº',
+      comingSoon: 'å³å°æ¨åº',
+      divider: 'æ',
+      guest: 'ä»¥è¨ªå®¢èº«ä»½ç¹¼çº',
+      guestNote: 'ä¸éè¦å¸³èã»è³æå²å­å¨æ­¤è£ç½®',
     },
   }[lang]
 
@@ -76,7 +77,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           onClick={() => setLang(lang === 'en' ? 'zh' : 'en')}
           className="text-xs font-semibold text-slate-500 bg-white border border-slate-200 px-3 py-1.5 rounded-full hover:border-[#0F9E75] transition-colors"
         >
-          {lang === 'en' ? '中文' : 'EN'}
+          {lang === 'en' ? 'ä¸­æ' : 'EN'}
         </button>
       </div>
 
@@ -98,7 +99,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         {/* Feature pills */}
         <div className="flex flex-wrap gap-2 justify-center mt-2">
           {(lang === 'zh'
-            ? ['早午晚三餐', '身體數據追蹤', 'AI 個人化', '購物清單']
+            ? ['æ©åæä¸é¤', 'èº«é«æ¸æè¿½è¹¤', 'AI åäººå', 'è³¼ç©æ¸å®']
             : ['3 meals/day', 'Body tracking', 'AI personalised', 'Shopping list']
           ).map((f) => (
             <span key={f} className="text-xs font-semibold text-[#0F9E75] bg-[#E8F5F0] px-3 py-1 rounded-full">
@@ -110,11 +111,10 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
       {/* Login options */}
       <div className="w-full max-w-sm space-y-3">
-        {/* Social logins (disabled) */}
+        {/* Social logins (Phone & Email - coming soon) */}
         {[
           { icon: Phone, label: copy.phone },
           { icon: Mail, label: copy.email },
-          { icon: Chrome, label: copy.google },
         ].map(({ icon: Icon, label }) => (
           <button
             key={label}
@@ -129,6 +129,17 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             </span>
           </button>
         ))}
+
+        {/* Google OAuth */}
+        <button
+          onClick={() => signIn('google', { callbackUrl: '/' })}
+          disabled={loading}
+          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white border border-slate-200 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:shadow-sm transition-all active:scale-98 relative"
+          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
+        >
+          <Chrome size={18} className="text-slate-500" />
+          <span>{copy.google}</span>
+        </button>
 
         {/* Divider */}
         <div className="flex items-center gap-3 py-1">
