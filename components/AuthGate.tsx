@@ -1,24 +1,36 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { SessionProvider, useSession } from 'next-auth/react'
 import { getGuestSession } from '@/lib/storage'
 import LoginScreen from './LoginScreen'
 
-export default function AuthGate({ children }: { children: React.ReactNode }) {
+function AuthGateInner({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
-  const [loggedIn, setLoggedIn] = useState(false)
+  const [guestLoggedIn, setGuestLoggedIn] = useState(false)
+  const { data: session, status } = useSession()
 
   useEffect(() => {
-    setLoggedIn(!!getGuestSession())
+    setGuestLoggedIn(!!getGuestSession())
     setReady(true)
   }, [])
 
-  // Avoid flash of login screen during hydration
-  if (!ready) return null
+  // Wait for both local check and NextAuth to resolve
+  if (!ready || status === 'loading') return null
 
-  if (!loggedIn) {
-    return <LoginScreen onLogin={() => setLoggedIn(true)} />
+  const isLoggedIn = guestLoggedIn || !!session
+
+  if (!isLoggedIn) {
+    return <LoginScreen onLogin={() => setGuestLoggedIn(true)} />
   }
 
   return <>{children}</>
+}
+
+export default function AuthGate({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider>
+      <AuthGateInner>{children}</AuthGateInner>
+    </SessionProvider>
+  )
 }
