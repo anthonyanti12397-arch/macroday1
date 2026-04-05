@@ -21,7 +21,7 @@ export default function UpgradePrompt({ onClose, onUpgrade }: UpgradePromptProps
       saveUserProfile({
         goal: 'maintain', dietaryRestrictions: [],
         proteinPreferences: [], carbPreferences: [],
-        cookingStyle: 'both', isPro: true,
+        cookingStyle: 'both', cuisinePreferences: [], isPro: true,
       })
     }
     onUpgrade()
