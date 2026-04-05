@@ -22,7 +22,9 @@
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-radio-group": "^1.2.0",
     "@radix-ui/react-tabs": "^1.1.0",
-    "@radix-ui/react-toast": "^1.2.1"
+    "@radix-ui/react-toast": "^1.2.1",
+    "next-auth": "^4.24.7",
+    "resend": "^3.2.0"
   },
   "devDependencies": {
     "typescript": "^5",
