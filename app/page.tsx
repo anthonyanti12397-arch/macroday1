@@ -11,6 +11,7 @@ import type { InBodyRecord, UserProfile, DailyMeals } from '@/lib/types'
 import MacroBar from '@/components/MacroBar'
 import UpgradePrompt from '@/components/UpgradePrompt'
 import { useSession } from 'next-auth/react'
+import { BETA_MODE } from '@/lib/constants'
 
 function estimateBMR(r: InBodyRecord): number {
   if (r.bmr) return r.bmr
@@ -75,6 +76,16 @@ export default function DashboardPage() {
           <Settings size={18} className="text-slate-500" />
         </button>
       </div>
+
+      {/* Beta banner */}
+      {BETA_MODE && (
+        <div className="flex items-center gap-2.5 bg-[#7F77DD]/10 border border-[#7F77DD]/20 rounded-2xl px-4 py-2.5">
+          <Zap size={14} className="text-[#7F77DD] shrink-0" />
+          <p className="text-xs font-semibold text-[#7F77DD]">
+            {lang === 'zh' ? '公測版 — 所有功能限時免費開放' : 'Beta — All features unlocked for free'}
+          </p>
+        </div>
+      )}
 
       {/* Guest data warning */}
       {isGuest && status !== 'authenticated' && !guestWarningDismissed && (

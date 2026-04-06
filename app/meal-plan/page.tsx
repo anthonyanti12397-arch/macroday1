@@ -15,7 +15,7 @@ import MealCard from '@/components/MealCard'
 import UpgradePrompt from '@/components/UpgradePrompt'
 import UsageCounter from '@/components/UsageCounter'
 import { useLang } from '@/contexts/LangContext'
-import { FREE_DAILY_LIMIT } from '@/lib/constants'
+import { FREE_DAILY_LIMIT, BETA_MODE } from '@/lib/constants'
 
 async function fetchImage(mealName: string, imagePrompt?: string): Promise<string | null> {
   try {
@@ -89,7 +89,7 @@ export default function MealPlanPage() {
     const currentInbody = getLatestInBody()
     if (!currentInbody || !currentProfile) return
 
-    if (!currentProfile.isPro) {
+    if (!currentProfile.isPro && !BETA_MODE) {
       const usage = getTodayUsage()
       if (usage.count >= FREE_DAILY_LIMIT) {
         setShowUpgrade(true)
@@ -131,7 +131,7 @@ export default function MealPlanPage() {
   async function generateWeek() {
     const currentProfile = getUserProfile()
     if (!inbody || !currentProfile) return
-    if (!currentProfile.isPro) { setShowUpgrade(true); return }
+    if (!currentProfile.isPro && !BETA_MODE) { setShowUpgrade(true); return }
 
     setLoadingWeek(true)
     setErrorWeek('')
@@ -227,7 +227,7 @@ export default function MealPlanPage() {
             <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-2xl px-4 py-3">{errorToday}</div>
           )}
 
-          {!profile?.isPro && <UsageCounter key={usageKey} />}
+          {!profile?.isPro && !BETA_MODE && <UsageCounter key={usageKey} />}
 
           {/* Skeleton */}
           {loadingToday && (
@@ -341,7 +341,7 @@ export default function MealPlanPage() {
             <div className="card p-8 text-center space-y-2">
               <p className="font-semibold text-slate-700">{mp.noData}</p>
               <p className="text-slate-400 text-sm">
-                {profile && !profile.isPro ? mp.proRequired : mp.noDataDesc}
+                {profile && !profile.isPro && !BETA_MODE ? mp.proRequired : mp.noDataDesc}
               </p>
             </div>
           )}

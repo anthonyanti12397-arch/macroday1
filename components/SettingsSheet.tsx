@@ -7,6 +7,7 @@ import {
   ChevronRight, Crown, User, Check,
 } from 'lucide-react'
 import { clearSession, getUserProfile, getGuestSession } from '@/lib/storage'
+import { BETA_MODE } from '@/lib/constants'
 import { useLang } from '@/contexts/LangContext'
 import UpgradePrompt from './UpgradePrompt'
 import Logo from './Logo'
@@ -31,7 +32,7 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
   }
 
   const avatarLetter = session?.id?.slice(6, 7) ?? 'G'
-  const isPro = profile?.isPro ?? false
+  const isPro = BETA_MODE || (profile?.isPro ?? false)
   const goalLabel = profile?.goal ? s.goalLabels[profile.goal] : '—'
 
   return (
@@ -78,7 +79,9 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
                     </span>
                   </div>
                   <p className="text-white/70 text-xs">
-                    {isPro ? (
+                    {BETA_MODE ? (
+                      <span className="flex items-center gap-1"><Zap size={11} className="text-yellow-300" /> Beta — All features unlocked</span>
+                    ) : isPro ? (
                       <span className="flex items-center gap-1"><Crown size={11} className="text-yellow-300" /> Pro</span>
                     ) : 'Free plan'}
                   </p>
