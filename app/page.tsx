@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle } from 'lucide-react'
+import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle, Coffee } from 'lucide-react'
 import Logo from '@/components/Logo'
 import SettingsSheet from '@/components/SettingsSheet'
 import { useLang } from '@/contexts/LangContext'
@@ -158,6 +158,28 @@ export default function DashboardPage() {
               <Link href="/inbody" className="ml-auto text-white/60 text-[10px] font-semibold hover:text-white">Edit ›</Link>
             </div>
           </div>
+
+          {/* Buy Me a Coffee */}
+          <a
+            href="https://buymeacoffee.com/anthonyantm"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3.5 p-3.5 rounded-2xl border border-slate-100 bg-white hover:border-[#FFC800] transition-colors"
+            style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+          >
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #FFDD00 0%, #FFC800 100%)' }}>
+              <Coffee size={18} className="text-[#1a1a1a]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-800">
+                {lang === 'zh' ? '請開發者喝杯咖啡 ☕' : 'Buy me a coffee ☕'}
+              </p>
+              <p className="text-xs text-slate-400">
+                {lang === 'zh' ? '支持 MacroDay 持續開發' : 'Support MacroDay development'}
+              </p>
+            </div>
+            <span className="text-slate-300 text-lg shrink-0">›</span>
+          </a>
 
           {/* Daily targets */}
           <div className="card-lg p-5">
