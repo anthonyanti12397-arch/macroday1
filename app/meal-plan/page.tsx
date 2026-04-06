@@ -56,25 +56,20 @@ export default function MealPlanPage() {
 
   const generateImages = useCallback(async (meals: DailyMeals) => {
     const mealTypes = ['breakfast', 'lunch', 'dinner'] as const
-    setImagesLoading({ breakfast: true, lunch: true, dinner: true })
-    await Promise.all(
-      mealTypes.map(async (type) => {
-        const meal = meals[type]
-        if (meal.imageUrl) {
-          setImagesLoading((prev) => ({ ...prev, [type]: false }))
-          return
-        }
-        const url = await fetchImage(meal.name, meal.imagePrompt)
-        if (url) {
-          updateMealImage(type, url)
-          setDailyMeals((prev) => {
-            if (!prev) return prev
-            return { ...prev, [type]: { ...prev[type], imageUrl: url } }
-          })
-        }
-        setImagesLoading((prev) => ({ ...prev, [type]: false }))
-      })
-    )
+    for (const type of mealTypes) {
+      const meal = meals[type]
+      if (meal.imageUrl) continue
+      setImagesLoading((prev) => ({ ...prev, [type]: true }))
+      const url = await fetchImage(meal.name, meal.imagePrompt)
+      if (url) {
+        updateMealImage(type, url)
+        setDailyMeals((prev) => {
+          if (!prev) return prev
+          return { ...prev, [type]: { ...prev[type], imageUrl: url } }
+        })
+      }
+      setImagesLoading((prev) => ({ ...prev, [type]: false }))
+    }
   }, [])
 
   useEffect(() => {
@@ -268,12 +263,14 @@ export default function MealPlanPage() {
 
               {(['breakfast', 'lunch', 'dinner'] as const).map((type) => {
                 const meal: Meal = { ...dailyMeals[type] }
+                const mealTypeLabel = t.meal[type]
                 return (
                   <MealCard
                     key={type}
                     meal={meal}
-                    mealType={type.charAt(0).toUpperCase() + type.slice(1)}
+                    mealType={mealTypeLabel}
                     imageLoading={imagesLoading[type] ?? false}
+                    mealKey={type}
                   />
                 )
               })}
@@ -305,10 +302,12 @@ export default function MealPlanPage() {
           )}
 
           {!loadingToday && !dailyMeals && !errorToday && (
-            <div className="card p-8 text-center space-y-2">
-              <p className="font-semibold text-slate-700">{mp.todayEmpty}</p>
-              <p className="text-slate-400 text-sm">{mp.todayEmptyDesc}</p>
-            </div>
+            <TodayEmptyState
+              profile={profile}
+              inbody={inbody}
+              lang={lang}
+              onGenerate={() => generateToday(false)}
+            />
           )}
         </>
       )}
@@ -359,6 +358,67 @@ export default function MealPlanPage() {
           }}
         />
       )}
+    </div>
+  )
+}
+
+function calcDailyTargets(inbody: InBodyRecord, goal: UserProfile['goal']) {
+  const bmr = inbody.bmr ?? Math.round(
+    (10 * inbody.weight + 6.25 * inbody.height - 5 * inbody.age) + (inbody.gender === 'male' ? 5 : -161)
+  )
+  const muscle = inbody.skeletalMuscleMass
+  let cal: number, protein: number
+  switch (goal) {
+    case 'fat_loss':    cal = Math.round(bmr * 0.85); protein = muscle ? Math.round(muscle * 2.2) : Math.round(inbody.weight * 1.8); break
+    case 'muscle_gain': cal = Math.round(bmr * 1.15); protein = muscle ? Math.round(muscle * 2.5) : Math.round(inbody.weight * 2.0); break
+    default:            cal = Math.round(bmr * 1.0);  protein = muscle ? Math.round(muscle * 2.0) : Math.round(inbody.weight * 1.6)
+  }
+  return { cal, protein }
+}
+
+function TodayEmptyState({ profile, inbody, lang, onGenerate }: {
+  profile: UserProfile | null
+  inbody: InBodyRecord | null
+  lang: string
+  onGenerate: () => void
+}) {
+  const now = new Date()
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const weekdaysZh = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+  const dayLabel = lang === 'zh' ? weekdaysZh[now.getDay()] : weekdays[now.getDay()]
+  const dateStr = `${now.getMonth() + 1}/${now.getDate()}`
+  const targets = (inbody && profile) ? calcDailyTargets(inbody, profile.goal) : null
+
+  return (
+    <div className="card-lg p-6 space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-bold text-[#0F9E75] uppercase tracking-widest mb-0.5">{dayLabel}</p>
+          <p className="text-2xl font-bold text-slate-900">{dateStr}</p>
+        </div>
+        <div className="w-14 h-14 rounded-3xl bg-[#E8F5F0] flex items-center justify-center">
+          <UtensilsCrossed size={24} className="text-[#0F9E75]" />
+        </div>
+      </div>
+      {targets && (
+        <div className="flex gap-2">
+          <div className="flex-1 bg-slate-50 rounded-2xl p-3 text-center">
+            <p className="text-lg font-bold text-slate-800">{targets.cal}</p>
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">kcal</p>
+          </div>
+          <div className="flex-1 bg-[#E8F5F0] rounded-2xl p-3 text-center">
+            <p className="text-lg font-bold text-[#0F9E75]">{targets.protein}g</p>
+            <p className="text-[10px] font-semibold text-[#0F9E75]/60 uppercase tracking-wide">{lang === 'zh' ? '蛋白質' : 'Protein'}</p>
+          </div>
+        </div>
+      )}
+      <button onClick={onGenerate} className="w-full btn-primary py-4 text-base gap-2">
+        <UtensilsCrossed size={18} />
+        {lang === 'zh' ? '生成今日三餐' : "Generate Today's Meals"}
+      </button>
+      <p className="text-center text-xs text-slate-400">
+        {lang === 'zh' ? 'AI 根據你的身體數據個人化生成' : 'AI personalised based on your body data'}
+      </p>
     </div>
   )
 }

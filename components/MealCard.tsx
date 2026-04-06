@@ -1,21 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Meal } from '@/lib/types'
-import { ChevronDown, ChevronUp, Clock, ShoppingBag, UtensilsCrossed } from 'lucide-react'
+import { ChevronDown, ChevronUp, Clock, Heart, CheckCircle2, ShoppingBag, UtensilsCrossed } from 'lucide-react'
 import Image from 'next/image'
 import { useLang } from '@/contexts/LangContext'
+import { toggleMealEaten, getEatenMeals, toggleFavorite, isFavorite } from '@/lib/storage'
 
 interface MealCardProps {
   meal: Meal
   mealType: string
   imageLoading?: boolean
+  mealKey?: string
 }
 
-export default function MealCard({ meal, mealType, imageLoading = false }: MealCardProps) {
-  const { t } = useLang()
+export default function MealCard({ meal, mealType, imageLoading = false, mealKey }: MealCardProps) {
+  const { lang, t } = useLang()
   const m = t.meal
   const [expanded, setExpanded] = useState(false)
+  const [eaten, setEaten] = useState(false)
+  const [fav, setFav] = useState(false)
+
+  useEffect(() => {
+    if (mealKey) setEaten(getEatenMeals().includes(mealKey))
+    setFav(isFavorite(meal.name))
+  }, [meal.name, mealKey])
+
+  function handleEaten(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!mealKey) return
+    const updated = toggleMealEaten(mealKey)
+    setEaten(updated.includes(mealKey))
+  }
+
+  function handleFav(e: React.MouseEvent) {
+    e.stopPropagation()
+    const added = toggleFavorite(meal)
+    setFav(added)
+  }
   const hasRecipe = !meal.isTakeout && (meal.ingredients.length > 0 || meal.steps.length > 0)
   const hasTakeoutInfo = meal.isTakeout && meal.whereToGet
 
@@ -93,6 +115,34 @@ export default function MealCard({ meal, mealType, imageLoading = false }: MealC
           <MacroChip value={`${meal.carbs}g`} label={m.carbs} bg="bg-[#FDF5E6]" text="text-[#E09B20]" />
           <MacroChip value={`${meal.fat}g`} label={m.fat} bg="bg-[#FDF0EB]" text="text-[#D85A30]" />
           <MacroChip value={`${meal.calories}`} label="kcal" bg="bg-slate-100" text="text-slate-600" />
+        </div>
+
+        {/* Eaten + Favorite actions */}
+        <div className="flex items-center gap-2 pt-1">
+          {mealKey && (
+            <button
+              onClick={handleEaten}
+              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all ${
+                eaten
+                  ? 'bg-[#E8F5F0] text-[#0F9E75] border-[#0F9E75]/20'
+                  : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-[#0F9E75]/40 hover:text-[#0F9E75]'
+              }`}
+            >
+              <CheckCircle2 size={13} className={eaten ? 'fill-[#0F9E75] text-white' : ''} />
+              {lang === 'zh' ? (eaten ? '已吃' : '標記已吃') : (eaten ? 'Eaten' : 'Mark eaten')}
+            </button>
+          )}
+          <button
+            onClick={handleFav}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all ${
+              fav
+                ? 'bg-red-50 text-red-500 border-red-200'
+                : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-red-200 hover:text-red-400'
+            }`}
+          >
+            <Heart size={13} className={fav ? 'fill-red-500 text-red-500' : ''} />
+            {lang === 'zh' ? (fav ? '已收藏' : '收藏') : (fav ? 'Saved' : 'Save')}
+          </button>
         </div>
 
         {hasTakeoutInfo && (

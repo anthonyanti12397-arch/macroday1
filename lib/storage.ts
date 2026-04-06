@@ -205,6 +205,60 @@ export function clearSession(): void {
   }
 }
 
+// ── Eaten Meals ───────────────────────────────────────────────────────────────
+
+export function getEatenMeals(): string[] {
+  try {
+    const key = `macroday_eaten_${new Date().toISOString().split('T')[0]}`
+    const raw = localStorage.getItem(key)
+    if (!raw) return []
+    return JSON.parse(raw) as string[]
+  } catch {
+    return []
+  }
+}
+
+export function toggleMealEaten(mealType: string): string[] {
+  try {
+    const key = `macroday_eaten_${new Date().toISOString().split('T')[0]}`
+    const current = getEatenMeals()
+    const idx = current.indexOf(mealType)
+    const updated = idx >= 0 ? current.filter((m) => m !== mealType) : [...current, mealType]
+    localStorage.setItem(key, JSON.stringify(updated))
+    return updated
+  } catch {
+    return []
+  }
+}
+
+// ── Favorites ─────────────────────────────────────────────────────────────────
+
+export function getFavorites(): import('./types').Meal[] {
+  try {
+    const raw = localStorage.getItem('macroday_favorites')
+    if (!raw) return []
+    return JSON.parse(raw) as import('./types').Meal[]
+  } catch {
+    return []
+  }
+}
+
+export function toggleFavorite(meal: import('./types').Meal): boolean {
+  try {
+    const favs = getFavorites()
+    const exists = favs.some((f) => f.name === meal.name)
+    const updated = exists ? favs.filter((f) => f.name !== meal.name) : [...favs, meal]
+    localStorage.setItem('macroday_favorites', JSON.stringify(updated))
+    return !exists
+  } catch {
+    return false
+  }
+}
+
+export function isFavorite(mealName: string): boolean {
+  return getFavorites().some((f) => f.name === mealName)
+}
+
 // ── Language ──────────────────────────────────────────────────────────────────
 
 export function getLang(): 'en' | 'zh' {
