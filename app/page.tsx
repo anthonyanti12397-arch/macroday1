@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle, Coffee } from 'lucide-react'
+import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle } from 'lucide-react'
 import Logo from '@/components/Logo'
 import SettingsSheet from '@/components/SettingsSheet'
 import { useLang } from '@/contexts/LangContext'
@@ -167,8 +167,8 @@ export default function DashboardPage() {
             className="flex items-center gap-3.5 p-3.5 rounded-2xl border border-slate-100 bg-white hover:border-[#FFC800] transition-colors"
             style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
           >
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #FFDD00 0%, #FFC800 100%)' }}>
-              <Coffee size={18} className="text-[#1a1a1a]" />
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-xl" style={{ background: 'linear-gradient(135deg, #FFDD00 0%, #FFC800 100%)' }}>
+              ☕
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-slate-800">
