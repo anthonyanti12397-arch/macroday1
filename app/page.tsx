@@ -12,6 +12,7 @@ import MacroBar from '@/components/MacroBar'
 import UpgradePrompt from '@/components/UpgradePrompt'
 import { useSession } from 'next-auth/react'
 import { BETA_MODE } from '@/lib/constants'
+import NativeAd from '@/components/NativeAd'
 
 function estimateBMR(r: InBodyRecord): number {
   if (r.bmr) return r.bmr
@@ -158,6 +159,9 @@ export default function DashboardPage() {
               <Link href="/inbody" className="ml-auto text-white/60 text-[10px] font-semibold hover:text-white">Edit ›</Link>
             </div>
           </div>
+
+          {/* Native ad */}
+          <NativeAd />
 
           {/* Daily targets */}
           <div className="card-lg p-5">
