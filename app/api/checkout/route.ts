@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+const stripeInstance = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY) 
+  : null
 
 export async function POST(req: Request) {
+  if (!stripeInstance) {
+    return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 })
+  }
   try {
     const { userId } = await req.json()
 
     // 1. Create Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripeInstance.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
