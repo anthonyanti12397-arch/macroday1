@@ -39,7 +39,9 @@ export default function MealPlanGrid({ plan, imagesLoading = {} }: MealPlanGridP
                   : 'bg-white text-slate-400 border border-slate-100'
               }`}
             >
-              {day.date.split('-').slice(1).join('/')}
+              {day.date.includes('-') 
+                ? day.date.split('-').slice(1).join('/') 
+                : day.date.substring(0, 3).toUpperCase()}
             </button>
           ))}
         </div>
