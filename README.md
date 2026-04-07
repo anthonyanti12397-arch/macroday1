@@ -1,99 +1,69 @@
-# FuelWeek — AI-Powered Weekly Meal Planner for Gym Users
+# 🥗 MacroDay — AI-Powered Nutrition & Meal Coach
 
-FuelWeek generates personalised 7-day meal plans based on your InBody body-composition data. Powered by the Grok AI (xAI), it calculates precise calorie and protein targets from your BMR and skeletal muscle mass, then produces full meal plans, recipes, and a grouped shopping list — all stored locally in your browser with zero backend setup.
+**MacroDay** is a premium, mobile-first AI meal planner designed for gym enthusiasts. It transforms your **InBody** body composition data into personalized, high-performance meal plans. Powered by the latest Grok-3 Mini AI, it calculates precise calorie/protein targets and generates full recipes, shopping lists, and progress charts.
 
----
-
-## Setup
-
-```bash
-# 1. Install dependencies
-npm install
-
-# 2. Add your Grok API key
-cp .env.local.example .env.local
-# Edit .env.local and set: XAI_API_KEY=your_xai_api_key_here
-
-# 3. Start the dev server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
+![MacroDay Banner](https://macroday.vercel.app/api/og) *(Placeholder for OG image)*
 
 ---
 
-## Deploy to Vercel
+## ✨ Key Features
 
-1. Push the repo to GitHub.
-2. Import the repo in [vercel.com/new](https://vercel.com/new).
-3. Add the environment variable `XAI_API_KEY` in **Project → Settings → Environment Variables**.
-4. Deploy — done. No database, no serverless DB config needed.
-
----
-
-## Free vs Pro
-
-| Feature | Free | Pro ($5/month) |
-|---|---|---|
-| Today's single recipe | 2/day | Unlimited |
-| Full 7-day meal plan | — | ✓ |
-| Auto shopping list | — | ✓ |
-| InBody trend chart | ✓ | ✓ |
-| Macro targets | ✓ | ✓ |
-
-> **MVP note:** Pro status is stored in `localStorage` for now. Real payment (Stripe etc.) can replace the `UpgradePrompt` component without touching anything else.
+- **🚀 Instant Generation**: Cached AI logic for near-zero latency on returning users.
+- **💳 $1 Lifetime Pro**: Integrated Stripe checkout for premium features.
+- **📄 High-Quality PDF**: Brand-aware meal plan exports for sharing with coaches.
+- **📲 Social Sharing**: One-tap "viral card" generation (3x High-DPI) for IG/WhatsApp Stories.
+- **🇭🇰 Localized Intelligence**: AI understands local cuisine context (e.g., Hong Kong Cha Chaan Teng, Healthy takeout options).
+- **📱 PWA Ready**: Install MacroDay on your home screen for a native app experience.
+- **📊 Deep Progress Tracking**: "Initial vs Current" InBody comparisons with directional insights.
 
 ---
 
-## Tech Stack
+## 🛠 Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 14 (App Router) |
-| Language | TypeScript (strict) |
-| Styling | Tailwind CSS |
-| UI primitives | shadcn/ui + Radix UI |
-| AI | Grok `grok-3-mini` via xAI API |
-| AI SDK | `openai` npm package (OpenAI-compatible) |
-| Persistence | `localStorage` (no database) |
-| Deployment | Vercel |
+| **Framework** | Next.js 14 (App Router) |
+| **Styling** | Vanilla CSS + Tailwind + Glassmorphism UX |
+| **Animations** | Framer Motion |
+| **AI Engine** | Grok-3 Mini via xAI API |
+| **Payment** | Stripe API |
+| **Visuals** | html2canvas + jsPDF (Exports) |
+| **Feedback** | Sonner (Toasts) + Confetti.js (Celebrations) |
 
 ---
 
-## How to Get a Grok API Key
+## 🚀 Quick Start
 
-1. Go to [console.x.ai](https://console.x.ai)
-2. Sign in with your X (Twitter) account.
-3. Navigate to **API Keys** → **Create new key**.
-4. Copy the key and paste it in `.env.local` as `XAI_API_KEY`.
+```bash
+# 1. Clone & Install
+npm install
+
+# 2. Configure Environment
+cp .env.local.example .env.local
+# Set XAI_API_KEY, STRIPE_SECRET_KEY, etc.
+
+# 3. Launch
+npm run dev
+```
 
 ---
 
-## Project Structure
+## 🌍 Internationalization
 
-```
-app/
-  layout.tsx              Root layout + bottom nav
-  page.tsx                Dashboard
-  inbody/page.tsx         InBody input & trend chart
-  meal-plan/page.tsx      Weekly meal plan generator
-  shopping/page.tsx       Shopping list
-  api/
-    generate-meals/       POST → full 7-day WeeklyPlan (Grok)
-    generate-recipe/      POST → single Meal (Grok)
-components/
-  BottomNav.tsx
-  InBodyForm.tsx
-  InBodyHistory.tsx       Pure SVG trend chart
-  MealPlanGrid.tsx
-  MealCard.tsx
-  MacroBar.tsx
-  ShoppingList.tsx
-  UsageCounter.tsx
-  UpgradePrompt.tsx
-lib/
-  types.ts                Shared TypeScript interfaces
-  constants.ts
-  storage.ts              localStorage helpers (SSR-safe)
-  utils.ts                cn() helper
-```
+MacroDay supports full **Traditional Chinese (繁體中文)** and **English** switching, including AI-generated content (recipes, ingredients, and local restaurant names).
+
+---
+
+## 📦 Project Structure
+
+- `app/api/checkout`: Stripe payment handling.
+- `app/api/generate-meals`: High-intelligence Grok prompts for 7-day plans.
+- `components/ShareButton`: High-DPI canvas capture for social media.
+- `components/ExportPDFButton`: Document generation logic.
+- `hooks/useGuestSession`: No-auth-required local-first state management.
+
+---
+
+## 📄 License
+
+MIT. Built with ❤️ for the gym community.
