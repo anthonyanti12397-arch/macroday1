@@ -63,7 +63,7 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
               </button>
             </div>
 
-            <div className="px-5 pb-10 space-y-5 mt-3">
+            <div className="px-5 pb-32 space-y-5 mt-3">
               {/* ── Account card ─────────────────────────────────────── */}
               <div
                 className="rounded-2xl p-4 flex items-center gap-4"

@@ -5,12 +5,15 @@ import type { WeeklyPlan } from '@/lib/types'
 import MealCard from './MealCard'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useLang } from '@/contexts/LangContext'
 
 interface MealPlanGridProps {
   plan: WeeklyPlan
+  imagesLoading?: Record<string, boolean>
 }
 
-export default function MealPlanGrid({ plan }: MealPlanGridProps) {
+export default function MealPlanGrid({ plan, imagesLoading = {} }: MealPlanGridProps) {
+  const { lang, t } = useLang()
   const [dayIdx, setDayIdx] = useState(0)
   const currentDay = plan.days[dayIdx]
 
@@ -28,7 +31,7 @@ export default function MealPlanGrid({ plan }: MealPlanGridProps) {
         <div className="flex-1 overflow-x-auto no-scrollbar flex justify-center gap-2 py-1 mx-2">
           {plan.days.map((day, idx) => (
             <button
-              key={day.date}
+              key={day.date + idx}
               onClick={() => setDayIdx(idx)}
               className={`shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 dayIdx === idx
@@ -36,7 +39,7 @@ export default function MealPlanGrid({ plan }: MealPlanGridProps) {
                   : 'bg-white text-slate-400 border border-slate-100'
               }`}
             >
-              {day.date.split(' ')[0].substring(0, 3)}
+              {day.date.split('-').slice(1).join('/')}
             </button>
           ))}
         </div>
@@ -70,10 +73,28 @@ export default function MealPlanGrid({ plan }: MealPlanGridProps) {
 
           {/* Meal cards */}
           <div className="space-y-4">
-            <MealCard meal={currentDay.breakfast} mealType="Breakfast" />
-            <MealCard meal={currentDay.lunch} mealType="Lunch" />
-            <MealCard meal={currentDay.dinner} mealType="Dinner" />
-            {currentDay.snack && <MealCard meal={currentDay.snack} mealType="Snack" />}
+            <MealCard 
+              meal={currentDay.breakfast} 
+              mealType={t.meal.breakfast} 
+              imageLoading={imagesLoading[`week-${dayIdx}-breakfast`]} 
+            />
+            <MealCard 
+              meal={currentDay.lunch} 
+              mealType={t.meal.lunch} 
+              imageLoading={imagesLoading[`week-${dayIdx}-lunch`]} 
+            />
+            <MealCard 
+              meal={currentDay.dinner} 
+              mealType={t.meal.dinner} 
+              imageLoading={imagesLoading[`week-${dayIdx}-dinner`]} 
+            />
+            {currentDay.snack && (
+              <MealCard 
+                meal={currentDay.snack} 
+                mealType={t.meal.snack} 
+                imageLoading={imagesLoading[`week-${dayIdx}-snack`]} 
+              />
+            )}
           </div>
         </motion.div>
       </AnimatePresence>
@@ -86,11 +107,10 @@ function DayChip({ label, value, color }: { label: string; value: string; color:
     protein: 'bg-[#0F9E75]/10 text-[#0F9E75]',
     carbs: 'bg-[#E09B20]/10 text-[#E09B20]',
     fat: 'bg-[#D85A30]/10 text-[#D85A30]',
-    zinc: 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300',
   }
 
   return (
-    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${colorMap[color] ?? colorMap.zinc}`}>
+    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${colorMap[color] ?? 'bg-slate-100'}`}>
       {label} {value}
     </span>
   )

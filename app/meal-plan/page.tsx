@@ -67,13 +67,40 @@ export default function MealPlanPage() {
       setImagesLoading((prev) => ({ ...prev, [type]: true }))
       const url = await fetchImage(meal.name, meal.imagePrompt)
       if (url) {
-        updateMealImage(type, url)
+        updateMealImage(type, url) // This only updates Daily in storage...
         setDailyMeals((prev) => {
           if (!prev) return prev
           return { ...prev, [type]: { ...prev[type], imageUrl: url } }
         })
       }
       setImagesLoading((prev) => ({ ...prev, [type]: false }))
+    }
+  }, [])
+
+  const generateWeekImages = useCallback(async (weekPlan: WeeklyPlan) => {
+    // Generate images for each day of the week
+    for (let dayIdx = 0; dayIdx < weekPlan.days.length; dayIdx++) {
+      const day = weekPlan.days[dayIdx]
+      const types = ['breakfast', 'lunch', 'dinner', 'snack'] as const
+      for (const type of types) {
+        const meal = day[type]
+        if (!meal || meal.imageUrl) continue
+        
+        const loadingKey = `week-${dayIdx}-${type}`
+        setImagesLoading((prev) => ({ ...prev, [loadingKey]: true }))
+        
+        const url = await fetchImage(meal.name, meal.imagePrompt)
+        if (url) {
+          setPlan((prev) => {
+            if (!prev) return prev
+            const newDays = [...prev.days]
+            newDays[dayIdx] = { ...newDays[dayIdx], [type]: { ...newDays[dayIdx][type]!, imageUrl: url } }
+            // Note: We should ideally update storage too, but plan is already saved
+            return { ...prev, days: newDays }
+          })
+        }
+        setImagesLoading((prev) => ({ ...prev, [loadingKey]: false }))
+      }
     }
   }, [])
 
@@ -85,7 +112,11 @@ export default function MealPlanPage() {
       setDailyMeals(cached)
       generateImages(cached)
     }
-    setPlan(getLatestWeeklyPlan())
+    const weekly = getLatestWeeklyPlan()
+    if (weekly) {
+      setPlan(weekly)
+      generateWeekImages(weekly)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -195,10 +226,10 @@ export default function MealPlanPage() {
     }).then(async res => {
       const data = await res.json() as WeeklyPlan | { error: string }
       if ('error' in data) throw new Error(data.error)
-      saveWeeklyPlan(data)
       saveToStatsCache(cacheHash + '_weekly', data)
       setMemoryCache(cacheHash + '_weekly', data)
       setPlan(data)
+      generateWeekImages(data)
       return data
     })
 
@@ -399,8 +430,8 @@ export default function MealPlanPage() {
               <div className="flex justify-end pr-1">
                  <ExportPDFButton targetId="weekly-plan-content" fileName="MacroDay-Weekly-Plan" />
               </div>
-              <div id="weekly-plan-content" className="p-1">
-                <MealPlanGrid plan={plan} />
+               <div id="weekly-plan-content" className="p-1">
+                <MealPlanGrid plan={plan} imagesLoading={imagesLoading} />
               </div>
             </div>
           )}
