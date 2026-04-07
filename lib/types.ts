@@ -40,6 +40,7 @@ export interface Meal {
   whereToGet?: string     // e.g. "McDonald's", "任何茶餐廳"
   imageUrl?: string
   imagePrompt?: string    // English visual description for image generation
+  isEaten?: boolean
 }
 
 export interface DailyMeals {

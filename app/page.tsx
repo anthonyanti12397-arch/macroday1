@@ -15,6 +15,7 @@ import { useSession } from 'next-auth/react'
 import { BETA_MODE } from '@/lib/constants'
 import BuyMeACoffee from '@/components/BuyMeACoffee'
 import ShareButton from '@/components/ShareButton'
+import ComplianceCalendar from '@/components/ComplianceCalendar'
 
 function estimateBMR(r: InBodyRecord): number {
   if (r.bmr) return r.bmr
@@ -201,6 +202,9 @@ export default function DashboardPage() {
               <MacroBar label={t.meal.fat} target={targets.fat} color="#D85A30" />
             </div>
           </div>
+
+          {/* Compliance Tracker */}
+          <ComplianceCalendar />
 
           {/* Today's meals status card */}
           <Link href="/meal-plan" className="block">

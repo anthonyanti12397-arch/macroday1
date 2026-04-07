@@ -267,6 +267,31 @@ export function toggleMealEaten(mealType: string): string[] {
   }
 }
 
+export function getComplianceHistory(days = 30): Record<string, 'full' | 'partial' | 'none'> {
+  const history: Record<string, 'full' | 'partial' | 'none'> = {}
+  const now = new Date()
+  for (let i = 0; i < days; i++) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - i)
+    const ds = d.toISOString().split('T')[0]
+    const key = `macroday_eaten_${ds}`
+    try {
+      const raw = localStorage.getItem(key)
+      if (raw) {
+        const eaten = JSON.parse(raw) as string[]
+        if (eaten.length >= 3) history[ds] = 'full'
+        else if (eaten.length > 0) history[ds] = 'partial'
+        else history[ds] = 'none'
+      } else {
+        history[ds] = 'none'
+      }
+    } catch {
+      history[ds] = 'none'
+    }
+  }
+  return history
+}
+
 // ── Favorites ─────────────────────────────────────────────────────────────────
 
 export function getFavorites(): import('./types').Meal[] {
