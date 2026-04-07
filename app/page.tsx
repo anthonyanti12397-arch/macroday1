@@ -12,6 +12,7 @@ import MacroBar from '@/components/MacroBar'
 import UpgradePrompt from '@/components/UpgradePrompt'
 import { useSession } from 'next-auth/react'
 import { BETA_MODE } from '@/lib/constants'
+import BuyMeACoffee from '@/components/BuyMeACoffee'
 
 function estimateBMR(r: InBodyRecord): number {
   if (r.bmr) return r.bmr
@@ -160,26 +161,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Buy Me a Coffee */}
-          <a
-            href="https://buymeacoffee.com/anthonyantm"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3.5 p-3.5 rounded-2xl border border-slate-100 bg-white hover:border-[#FFC800] transition-colors"
-            style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
-          >
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-xl" style={{ background: 'linear-gradient(135deg, #FFDD00 0%, #FFC800 100%)' }}>
-              ☕
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-slate-800">
-                {lang === 'zh' ? '請開發者喝杯咖啡 ☕' : 'Buy me a coffee ☕'}
-              </p>
-              <p className="text-xs text-slate-400">
-                {lang === 'zh' ? '支持 MacroDay 持續開發' : 'Support MacroDay development'}
-              </p>
-            </div>
-            <span className="text-slate-300 text-lg shrink-0">›</span>
-          </a>
+          <BuyMeACoffee />
 
           {/* Daily targets */}
           <div className="card-lg p-5">
