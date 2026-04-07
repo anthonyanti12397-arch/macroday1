@@ -20,6 +20,7 @@ import { useLang } from '@/contexts/LangContext'
 import { FREE_DAILY_LIMIT, BETA_MODE } from '@/lib/constants'
 import { toast } from 'sonner'
 import { MealCardSkeleton } from '@/components/Skeleton'
+import ExportPDFButton from '@/components/ExportPDFButton'
 
 async function fetchImage(mealName: string, imagePrompt?: string): Promise<string | null> {
   try {
@@ -306,15 +307,19 @@ export default function MealPlanPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="font-bold text-lg text-slate-900 tracking-tight">{t.dashboard.todayMeals}</h2>
-                <button
-                  onClick={() => generateToday(true)}
-                  className="text-xs font-semibold text-[#0F9E75] hover:text-[#0b8462] flex items-center gap-1 transition-colors"
-                >
-                  <RefreshCw size={12} /> {t.btn.regenerate}
-                </button>
+                <div className="flex items-center gap-2">
+                  <ExportPDFButton targetId="daily-meals-content" fileName={`MacroDay-Today-${new Date().toISOString().split('T')[0]}`} />
+                  <button
+                    onClick={() => generateToday(true)}
+                    className="text-xs font-semibold text-[#0F9E75] hover:text-[#0b8462] flex items-center gap-1 transition-colors"
+                  >
+                    <RefreshCw size={12} /> {t.btn.regenerate}
+                  </button>
+                </div>
               </div>
 
-              {(['breakfast', 'lunch', 'dinner'] as const).map((type) => {
+              <div id="daily-meals-content" className="space-y-4 -mx-1 px-1 py-1">
+                {(['breakfast', 'lunch', 'dinner'] as const).map((type) => {
                 const meal: Meal = { ...dailyMeals[type] }
                 const mealTypeLabel = t.meal[type]
                 return (
@@ -351,6 +356,7 @@ export default function MealPlanPage() {
                   </div>
                 )
               })()}
+              </div>
             </div>
           )}
 
@@ -388,7 +394,16 @@ export default function MealPlanPage() {
             </div>
           )}
 
-          {!loadingWeek && plan && <MealPlanGrid plan={plan} />}
+          {!loadingWeek && plan && (
+            <div className="space-y-4">
+              <div className="flex justify-end pr-1">
+                 <ExportPDFButton targetId="weekly-plan-content" fileName="MacroDay-Weekly-Plan" />
+              </div>
+              <div id="weekly-plan-content" className="p-1">
+                <MealPlanGrid plan={plan} />
+              </div>
+            </div>
+          )}
 
           {!loadingWeek && !plan && !errorWeek && (
             <div className="card p-8 text-center space-y-2">

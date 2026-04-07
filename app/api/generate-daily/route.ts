@@ -36,7 +36,6 @@ function calcTargets(inbody: InBodyRecord, goal: UserProfile['goal']) {
   return { targetCalories, targetProtein }
 }
 
-/** Recalculate calories from macros — always authoritative over the AI's stated value */
 function fixMacros(meal: Meal): Meal {
   const calculated = Math.round(meal.protein * 4 + meal.carbs * 4 + meal.fat * 9)
   return { ...meal, calories: calculated }
@@ -60,68 +59,40 @@ export async function POST(req: NextRequest) {
 
     const cookingStyleMap = {
       home: isChinese
-        ? '用戶自己在家煮食。提供完整家常食譜，包含食材清單和烹飪步驟。所有餐點 isTakeout 設為 false。'
-        : 'The user cooks at home. Provide full home-cooked recipes with ingredients and step-by-step cooking instructions. Set isTakeout to false for all meals.',
+        ? '用戶自己在家煮食。提供完整繁體中文食譜。'
+        : 'User cooks at home. Provide full recipes in English.',
       takeout: isChinese
-        ? '用戶只吃外賣。推薦在香港常見餐廳、快餐店或便利店容易買到的菜式（如茶餐廳、麥當勞、7-Eleven）。所有餐點 isTakeout 設為 true，whereToGet 填寫購買地點。ingredients 和 steps 留空。'
-        : 'The user eats takeout only. Suggest real dishes easily available at common restaurants. Set isTakeout to true, fill whereToGet. Keep ingredients and steps empty.',
+        ? '用戶常吃外賣。推薦香港本地常見餐廳菜式（如：茶餐廳、麥當勞、吉野家等）。isTakeout: true。'
+        : 'User eats takeout. Recommend real-world restaurant dishes. isTakeout: true.',
       both: isChinese
-        ? '混合：早餐為簡單家常菜（isTakeout: false），午餐為外賣（isTakeout: true，填 whereToGet），晚餐為家常菜（isTakeout: false）。'
-        : 'Mix: breakfast = simple home-cooked (isTakeout: false), lunch = takeout (isTakeout: true, fill whereToGet), dinner = home-cooked (isTakeout: false).',
+        ? '混合：早餐在家，午餐外賣（香港特色），晚餐在家。'
+        : 'Mix: Breakfast/Dinner at home, Lunch is takeout.',
     }
     const cookingInstruction = cookingStyleMap[profile.cookingStyle]
 
     const namingInstruction = isChinese
-      ? '- 所有菜名必須使用繁體中文（例如「照燒三文魚飯」而非 "Teriyaki Salmon Rice"）\n- 食材名稱和烹飪步驟也必須使用繁體中文\n- whereToGet 也用中文填寫（例如「茶餐廳」、「麥當勞」）'
-      : '- Meal names should be specific and appetising (e.g. "Teriyaki Salmon Rice Bowl")\n- Use English for all names and instructions'
+      ? '- 所有內容使用繁體中文\n- whereToGet 填寫具體類型（如「港式茶餐廳」、「健康沙拉店」）'
+      : '- Use English for all content\n- be specific about dish names'
 
     const userPrompt = `Generate today's 3 meals (breakfast, lunch, dinner) for a gym user.
+    
+    Goal: ${profile.goal}
+    Targets: ${targetCalories} kcal | ${targetProtein}g Protein.
+    Preferences: ${proteins} proteins, ${carbs} carbs.
+    Style: ${cookingInstruction}
+    
+    DIVERSITY & ACCURACY:
+    - No duplicate main ingredients in one day.
+    - Reference: 100g Chicken = 31g P, 100g Rice = 28g C.
+    - If user is ZH/HK, focus on local dishes (Steamed Fish, Dim Sum options, etc).
 
-Goal: ${profile.goal}
-Daily calorie target: ${targetCalories} kcal
-Daily protein target: ${targetProtein}g
-Dietary restrictions: ${restrictions}
-Preferred proteins: ${proteins}
-Preferred carbs: ${carbs}
-Cuisine style: ${cuisines}
-
-Cooking style: ${cookingInstruction}
-
-NUTRITION ACCURACY RULES (strictly follow):
-- Base macros on real portion sizes. Be precise and conservative.
-- Reference: 1 egg=6g P/5g F/80kcal, 100g chicken breast=31g P/3g F/165kcal, 100g rice(cooked)=3g P/28g C/130kcal, 1 slice bread=3g P/15g C/1g F/80kcal, 100g salmon=25g P/13g F/208kcal, 100g tofu=8g P/5g F/76kcal, 100g beef=26g P/15g F/250kcal, 100g pork belly=9g P/35g F/380kcal.
-- DO NOT invent high protein values. A chicken-egg sandwich on 2 slices bread = ~20g protein max.
-- Calories will be recalculated as (protein×4 + carbs×4 + fat×9) server-side — focus on getting macros right.
-
-IMAGE PROMPT RULE:
-- For each meal include an "imagePrompt" field: a short English visual description of the dish for food photography.
-- Always in English, even if the meal name is Chinese. Be specific about ingredients and presentation.
-- Example: "scrambled eggs with cherry tomatoes on sourdough toast" or "grilled chicken rice bowl with steamed broccoli and carrots"
-
-Return ONLY a JSON object (no markdown, no extra text):
-{
-  "breakfast": {
-    "name": "",
-    "imagePrompt": "",
-    "cookingTime": 0,
-    "calories": 0,
-    "protein": 0,
-    "carbs": 0,
-    "fat": 0,
-    "ingredients": [],
-    "steps": [],
-    "isTakeout": false,
-    "whereToGet": ""
-  },
-  "lunch": { ...same structure... },
-  "dinner": { ...same structure... }
-}
-
-Rules:
-- Total protein across 3 meals should be close to ${targetProtein}g
-- For takeout meals: ingredients=[], steps=[], whereToGet must name the type of shop/restaurant
-- For home meals: whereToGet=""
-${namingInstruction}`
+    Return ONLY a JSON object:
+    {
+      "breakfast": { "name": "", "imagePrompt": "", "cookingTime": 0, "protein": 0, "carbs": 0, "fat": 0, "ingredients": [], "steps": [], "isTakeout": false, "whereToGet": "" },
+      "lunch": { ... },
+      "dinner": { ... }
+    }
+    ${namingInstruction}`
 
     const client = getClient()
     const completion = await client.chat.completions.create({
@@ -131,7 +102,7 @@ ${namingInstruction}`
       messages: [
         {
           role: 'system',
-          content: 'You are a professional sports nutritionist AI. Generate precise, realistic meal recommendations with accurate macros based on real food composition data. Respond with valid JSON only. No markdown, no explanation, no code blocks.',
+          content: 'You are a sports nutritionist. Generate precise meal recommendations in JSON. No markdown.',
         },
         { role: 'user', content: userPrompt },
       ],
@@ -145,7 +116,6 @@ ${namingInstruction}`
       dinner: Meal
     }
 
-    // Server-side macro correction: recalculate calories from macros
     const result: DailyMeals = {
       date: new Date().toISOString().split('T')[0],
       breakfast: fixMacros(parsed.breakfast),
@@ -157,7 +127,6 @@ ${namingInstruction}`
 
     return NextResponse.json(result)
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }

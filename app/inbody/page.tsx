@@ -8,6 +8,7 @@ import InBodyChartModal from '@/components/InBodyChartModal'
 import UpgradePrompt from '@/components/UpgradePrompt'
 import { useLang } from '@/contexts/LangContext'
 import { Activity, CheckCircle, TrendingUp, Lock } from 'lucide-react'
+import ComparisonCard from '@/components/ComparisonCard'
 
 export default function InBodyPage() {
   const { t } = useLang()
@@ -61,6 +62,10 @@ export default function InBodyPage() {
         </div>
         <InBodyForm latestRecord={latest} latestProfile={profile} onSaved={handleSaved} />
       </div>
+
+      {history.length >= 2 && (
+        <ComparisonCard current={history[history.length - 1]} initial={history[0]} />
+      )}
 
       {/* View Charts button */}
       {history.length >= 2 && (

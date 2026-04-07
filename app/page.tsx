@@ -14,6 +14,7 @@ import UpgradePrompt from '@/components/UpgradePrompt'
 import { useSession } from 'next-auth/react'
 import { BETA_MODE } from '@/lib/constants'
 import BuyMeACoffee from '@/components/BuyMeACoffee'
+import ShareButton from '@/components/ShareButton'
 
 function estimateBMR(r: InBodyRecord): number {
   if (r.bmr) return r.bmr
@@ -137,7 +138,7 @@ export default function DashboardPage() {
       {inbody && profile && targets && (
         <>
           {/* Hero stats card */}
-          <div className="rounded-3xl overflow-hidden"
+          <div id="stats-card-capture" className="rounded-3xl overflow-hidden"
             style={{ background: 'linear-gradient(135deg, #0F9E75 0%, #0BD68A 100%)', boxShadow: '0 8px 24px rgba(15,158,117,0.3)' }}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-5">
@@ -145,9 +146,12 @@ export default function DashboardPage() {
                   <span className="text-white/60 text-[10px] font-bold uppercase tracking-[0.1em] mb-1">{inbody.date}</span>
                   <Logo lang={lang} size="sm" variant="white" />
                 </div>
-                <span className="text-[10px] font-bold px-3 py-1.5 rounded-xl bg-white/20 text-white border border-white/20 backdrop-blur-md">
-                  {t.settings.goalLabels[profile.goal]}
-                </span>
+                <div className="flex items-center gap-2">
+                   <ShareButton targetId="stats-card-capture" fileName={`MacroDay-Progress-${inbody.date}`} />
+                   <span className="text-[10px] font-bold px-3 py-1.5 rounded-xl bg-white/20 text-white border border-white/20 backdrop-blur-md">
+                     {t.settings.goalLabels[profile.goal]}
+                   </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4 mb-5">

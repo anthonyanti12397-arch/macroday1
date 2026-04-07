@@ -1,8 +1,11 @@
 'use client'
 
 import { saveUserProfile, getUserProfile } from '@/lib/storage'
-import { X, Zap, Infinity, Calendar, ShoppingCart, TrendingUp, Sparkles } from 'lucide-react'
+import { X, Zap, Infinity as InfinityIcon, Calendar, ShoppingCart, TrendingUp, Sparkles } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
+import { toast } from 'sonner'
+import { useState } from 'react'
+import { motion } from 'framer-motion'
 
 interface UpgradePromptProps {
   onClose: () => void
@@ -12,19 +15,26 @@ interface UpgradePromptProps {
 export default function UpgradePrompt({ onClose, onUpgrade }: UpgradePromptProps) {
   const { lang, t } = useLang()
   const u = t.upgrade
+  const [loading, setLoading] = useState(false)
 
-  function handleUpgrade() {
-    const profile = getUserProfile()
-    if (profile) {
-      saveUserProfile({ ...profile, isPro: true })
-    } else {
-      saveUserProfile({
-        goal: 'maintain', dietaryRestrictions: [],
-        proteinPreferences: [], carbPreferences: [],
-        cookingStyle: 'both', cuisinePreferences: [], isPro: true,
+  async function handleUpgrade() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'guest_beta' }) // We can pull real ID if needed
       })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error('Checkout failed')
+      }
+    } catch (err) {
+      toast.error(lang === 'zh' ? '支付跳轉失敗，請稍後再試' : 'Payment redirect failed. Please try again.')
+      setLoading(false)
     }
-    onUpgrade()
   }
 
   return (
@@ -42,7 +52,7 @@ export default function UpgradePrompt({ onClose, onUpgrade }: UpgradePromptProps
 
         <ul className="space-y-3 mb-6">
           {[
-            { icon: Infinity, text: u.feature1 },
+            { icon: InfinityIcon, text: u.feature1 },
             { icon: Calendar, text: u.feature2 },
             { icon: ShoppingCart, text: u.feature3 },
             { icon: TrendingUp, text: u.feature4 },
@@ -60,10 +70,18 @@ export default function UpgradePrompt({ onClose, onUpgrade }: UpgradePromptProps
             <p className="text-[10px] font-bold text-[#7F77DD]/60 mt-1">One-time payment. Forever access.</p>
         </div>
 
-        <button onClick={handleUpgrade}
-          className="w-full font-black py-4 rounded-2xl text-white transition-all active:scale-95 shadow-lg shadow-[#7F77DD]/20"
+        <button 
+          onClick={handleUpgrade}
+          disabled={loading}
+          className="w-full font-black py-4 rounded-2xl text-white transition-all active:scale-95 shadow-lg shadow-[#7F77DD]/20 flex items-center justify-center gap-2 disabled:opacity-50"
           style={{ background: 'linear-gradient(135deg, #7F77DD 0%, #9B8FE8 100%)' }}>
-          {lang === 'zh' ? '立即解鎖 $1 限時優惠' : 'Unlock $1 Lifetime Deal'}
+          {loading ? (
+            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}>
+               <Sparkles size={18} />
+            </motion.div>
+          ) : (
+            lang === 'zh' ? '立即解鎖 $1 限時優惠' : 'Unlock $1 Lifetime Deal'
+          )}
         </button>
 
         <button onClick={onClose} className="w-full mt-3 text-sm text-slate-400 hover:text-slate-600 transition-colors py-2">
