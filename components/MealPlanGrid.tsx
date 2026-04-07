@@ -1,39 +1,82 @@
 'use client'
 
+import { useState } from 'react'
 import type { WeeklyPlan } from '@/lib/types'
 import MealCard from './MealCard'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface MealPlanGridProps {
   plan: WeeklyPlan
 }
 
 export default function MealPlanGrid({ plan }: MealPlanGridProps) {
+  const [dayIdx, setDayIdx] = useState(0)
+  const currentDay = plan.days[dayIdx]
+
+  const nextDay = () => setDayIdx((prev) => (prev + 1) % plan.days.length)
+  const prevDay = () => setDayIdx((prev) => (prev - 1 + plan.days.length) % plan.days.length)
+
   return (
     <div className="space-y-6">
-      {plan.days.map((day) => (
-        <div key={day.date} className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 space-y-3">
-          {/* Day header */}
-          <h3 className="font-bold text-base text-zinc-800 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-700 pb-2">
-            {day.date}
-          </h3>
+      {/* Day Selector */}
+      <div className="flex items-center justify-between px-1">
+        <button onClick={prevDay} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
+          <ChevronLeft size={20} className="text-slate-400" />
+        </button>
+        
+        <div className="flex-1 overflow-x-auto no-scrollbar flex justify-center gap-2 py-1 mx-2">
+          {plan.days.map((day, idx) => (
+            <button
+              key={day.date}
+              onClick={() => setDayIdx(idx)}
+              className={`shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                dayIdx === idx
+                  ? 'bg-[#0F9E75] text-white shadow-lg shadow-[#0F9E75]/20'
+                  : 'bg-white text-slate-400 border border-slate-100'
+              }`}
+            >
+              {day.date.split(' ')[0].substring(0, 3)}
+            </button>
+          ))}
+        </div>
+
+        <button onClick={nextDay} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
+          <ChevronRight size={20} className="text-slate-400" />
+        </button>
+      </div>
+
+      {/* Swipeable Content */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={dayIdx}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+          className="space-y-5"
+        >
+          {/* Day header summary */}
+          <div className="flex items-end justify-between px-1">
+            <div>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">{currentDay.date}</h2>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{currentDay.totalCalories} kcal total</p>
+            </div>
+            <div className="flex gap-1.5 pb-1">
+               <DayChip label="P" value={`${currentDay.totalProtein}g`} color="protein" />
+               <DayChip label="C" value={`${currentDay.totalCarbs}g`} color="carbs" />
+            </div>
+          </div>
 
           {/* Meal cards */}
-          <div className="space-y-2">
-            <MealCard meal={day.breakfast} mealType="Breakfast" />
-            <MealCard meal={day.lunch} mealType="Lunch" />
-            <MealCard meal={day.dinner} mealType="Dinner" />
-            {day.snack && <MealCard meal={day.snack} mealType="Snack" />}
+          <div className="space-y-4">
+            <MealCard meal={currentDay.breakfast} mealType="Breakfast" />
+            <MealCard meal={currentDay.lunch} mealType="Lunch" />
+            <MealCard meal={currentDay.dinner} mealType="Dinner" />
+            {currentDay.snack && <MealCard meal={currentDay.snack} mealType="Snack" />}
           </div>
-
-          {/* Daily totals */}
-          <div className="flex flex-wrap gap-2 pt-1">
-            <DayChip label="Total" value={`${day.totalCalories} kcal`} color="zinc" />
-            <DayChip label="P" value={`${day.totalProtein}g`} color="protein" />
-            <DayChip label="C" value={`${day.totalCarbs}g`} color="carbs" />
-            <DayChip label="F" value={`${day.totalFat}g`} color="fat" />
-          </div>
-        </div>
-      ))}
+        </motion.div>
+      </AnimatePresence>
     </div>
   )
 }
@@ -47,8 +90,8 @@ function DayChip({ label, value, color }: { label: string; value: string; color:
   }
 
   return (
-    <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${colorMap[color] ?? colorMap.zinc}`}>
-      {label}: {value}
+    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${colorMap[color] ?? colorMap.zinc}`}>
+      {label} {value}
     </span>
   )
 }

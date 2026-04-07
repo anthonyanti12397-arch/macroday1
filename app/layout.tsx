@@ -5,6 +5,7 @@ import { APP_NAME } from '@/lib/constants'
 import BottomNav from '@/components/BottomNav'
 import AuthGate from '@/components/AuthGate'
 import { LangProvider } from '@/contexts/LangContext'
+import { Toaster } from 'sonner'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {children}
             </main>
             <BottomNav />
+            <Toaster position="top-center" richColors />
           </AuthGate>
         </LangProvider>
       </body>

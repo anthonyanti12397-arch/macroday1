@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle } from 'lucide-react'
+import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle, Sparkles, ChevronRight } from 'lucide-react'
 import Logo from '@/components/Logo'
 import SettingsSheet from '@/components/SettingsSheet'
 import { useLang } from '@/contexts/LangContext'
-import { getLatestInBody, getUserProfile, getTodayDailyMeals, getGuestSession } from '@/lib/storage'
+import { getLatestInBody, getUserProfile, getTodayDailyMeals, getGuestSession, getFromStatsCache } from '@/lib/storage'
+import { generateStatsHash, setMemoryCache } from '@/lib/cache'
 import type { InBodyRecord, UserProfile, DailyMeals } from '@/lib/types'
 import MacroBar from '@/components/MacroBar'
 import UpgradePrompt from '@/components/UpgradePrompt'
@@ -54,11 +55,24 @@ export default function DashboardPage() {
   const [guestWarningDismissed, setGuestWarningDismissed] = useState(false)
 
   useEffect(() => {
-    setInbody(getLatestInBody())
-    setProfile(getUserProfile())
-    setTodayMeals(getTodayDailyMeals())
+    const currentInbody = getLatestInBody()
+    const currentProfile = getUserProfile()
+    setInbody(currentInbody)
+    setProfile(currentProfile)
     setIsGuest(!!getGuestSession())
-  }, [])
+
+    if (currentInbody && currentProfile) {
+      const cacheHash = generateStatsHash(currentInbody, currentProfile, lang)
+      const statsCached = getFromStatsCache<DailyMeals>(cacheHash + '_daily')
+      if (statsCached) {
+        setTodayMeals(statsCached)
+        setMemoryCache(cacheHash + '_daily', statsCached)
+        return
+      }
+    }
+    
+    setTodayMeals(getTodayDailyMeals())
+  }, [lang])
 
   const targets = inbody && profile ? calcTargets(inbody, profile.goal) : null
 
@@ -125,23 +139,26 @@ export default function DashboardPage() {
           {/* Hero stats card */}
           <div className="rounded-3xl overflow-hidden"
             style={{ background: 'linear-gradient(135deg, #0F9E75 0%, #0BD68A 100%)', boxShadow: '0 8px 24px rgba(15,158,117,0.3)' }}>
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-white/70 text-xs font-semibold uppercase tracking-wider">{inbody.date}</span>
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/20 text-white border border-white/20">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex flex-col">
+                  <span className="text-white/60 text-[10px] font-bold uppercase tracking-[0.1em] mb-1">{inbody.date}</span>
+                  <Logo lang={lang} size="sm" variant="white" />
+                </div>
+                <span className="text-[10px] font-bold px-3 py-1.5 rounded-xl bg-white/20 text-white border border-white/20 backdrop-blur-md">
                   {t.settings.goalLabels[profile.goal]}
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <HeroStat label="Weight" value={`${inbody.weight}`} unit="kg" />
-                <HeroStat label="Height" value={`${inbody.height}`} unit="cm" />
-                <HeroStat label="Age" value={`${inbody.age}`} unit="yrs" />
+              <div className="grid grid-cols-3 gap-4 mb-5">
+                <HeroStat label={lang === 'zh' ? '體重' : 'Weight'} value={`${inbody.weight}`} unit="kg" />
+                <HeroStat label={lang === 'zh' ? '身高' : 'Height'} value={`${inbody.height}`} unit="cm" />
+                <HeroStat label={lang === 'zh' ? '年齡' : 'Age'} value={`${inbody.age}`} unit="" />
               </div>
               {(inbody.bodyFat != null || inbody.skeletalMuscleMass != null) && (
-                <div className="grid grid-cols-3 gap-3">
-                  {inbody.bodyFat != null && <HeroStat label="Body Fat" value={`${inbody.bodyFat}`} unit="%" />}
-                  {inbody.skeletalMuscleMass != null && <HeroStat label="Muscle" value={`${inbody.skeletalMuscleMass}`} unit="kg" />}
+                <div className="grid grid-cols-3 gap-4">
+                  {inbody.bodyFat != null && <HeroStat label={lang === 'zh' ? '體脂' : 'Body Fat'} value={`${inbody.bodyFat}`} unit="%" />}
+                  {inbody.skeletalMuscleMass != null && <HeroStat label={lang === 'zh' ? '肌肉' : 'Muscle'} value={`${inbody.skeletalMuscleMass}`} unit="kg" />}
                   <HeroStat label={inbody.bmr != null ? 'BMR' : 'BMR est.'} value={`${estimateBMR(inbody)}`} unit="kcal" />
                 </div>
               )}
@@ -164,14 +181,17 @@ export default function DashboardPage() {
           <BuyMeACoffee />
 
           {/* Daily targets */}
-          <div className="card-lg p-5">
-            <div className="flex items-center justify-between mb-4">
-              <p className="font-bold text-slate-800">{t.dashboard.targets}</p>
-              <span className="text-xs font-bold text-[#0F9E75] bg-[#E8F5F0] px-2.5 py-1 rounded-full">
-                {targets.calories} kcal
-              </span>
+          <div className="card-lg p-6 bg-white/70 backdrop-blur-xl border-white/40 shadow-sm transition-all hover:shadow-md">
+            <div className="flex items-center justify-between mb-5">
+              <p className="font-bold text-slate-800 tracking-tight">{t.dashboard.targets}</p>
+              <div className="flex flex-col items-end">
+                <span className="text-lg font-black text-[#0F9E75] leading-none">
+                  {targets.calories}
+                </span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">kcal / day</span>
+              </div>
             </div>
-            <div className="divide-y divide-slate-50">
+            <div className="space-y-4">
               <MacroBar label={t.meal.protein} target={targets.protein} color="#0F9E75" />
               <MacroBar label={t.meal.carbs} target={targets.carbs} color="#E09B20" />
               <MacroBar label={t.meal.fat} target={targets.fat} color="#D85A30" />

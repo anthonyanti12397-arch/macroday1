@@ -6,6 +6,7 @@ interface LogoProps {
   className?: string
   /** Show only the icon, no wordmark */
   iconOnly?: boolean
+  variant?: 'default' | 'white'
 }
 
 function LogoIcon({ size }: { size: number }) {
@@ -41,7 +42,7 @@ function LogoIcon({ size }: { size: number }) {
   )
 }
 
-export default function Logo({ lang = 'en', size = 'md', className = '', iconOnly = false }: LogoProps) {
+export default function Logo({ lang = 'en', size = 'md', className = '', iconOnly = false, variant = 'default' }: LogoProps) {
   const config = {
     sm:  { iconSize: 26, textClass: 'text-lg font-bold',   gap: 'gap-2' },
     md:  { iconSize: 34, textClass: 'text-2xl font-bold',  gap: 'gap-2.5' },
@@ -53,7 +54,7 @@ export default function Logo({ lang = 'en', size = 'md', className = '', iconOnl
   return (
     <div className={`flex items-center ${config.gap} ${className}`}>
       <LogoIcon size={config.iconSize} />
-      <span className={`tracking-tight text-slate-900 ${config.textClass}`}>
+      <span className={`tracking-tight ${variant === 'white' ? 'text-white' : 'text-slate-900'} ${config.textClass}`}>
         {lang === 'zh' ? APP_NAME_ZH : APP_NAME}
       </span>
     </div>

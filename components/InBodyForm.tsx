@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { InBodyRecord, UserProfile } from '@/lib/types'
 import { saveInBodyRecord, saveUserProfile } from '@/lib/storage'
 import { useLang } from '@/contexts/LangContext'
+import { toast } from 'sonner'
 
 interface InBodyFormProps {
   latestRecord: InBodyRecord | null
@@ -76,8 +77,20 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
   const [cuisinePrefs, setCuisinePrefs] = useState<string[]>(latestProfile?.cuisinePreferences ?? [])
   const [error, setError] = useState('')
 
-  const toggle = (arr: string[], val: string, setter: (v: string[]) => void) =>
+  const toggle = (arr: string[], val: string, setter: (v: string[]) => void) => {
+    if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(5);
     setter(arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val])
+  }
+
+  const setGenderWithHaptic = (g: 'male'|'female') => {
+    if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(5);
+    setGender(g);
+  }
+
+  const setGoalWithHaptic = (g: UserProfile['goal']) => {
+    if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(5);
+    setGoal(g);
+  }
 
   function validateOptionalNumber(val: string, min: number, max: number, label: string): string {
     if (!val) return ''
@@ -125,6 +138,7 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
 
     saveInBodyRecord(record)
     saveUserProfile(profile)
+    toast.success(lang === 'zh' ? '設定已儲存！' : 'Settings saved successfully!')
     onSaved()
   }
 
@@ -141,13 +155,13 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
           <Field label={`${i.age} *`} value={age} onChange={setAge} placeholder="28" />
           <div className="space-y-1">
             <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">{i.gender} *</label>
-            <div className="flex gap-2 h-[38px] items-center">
+            <div className="flex gap-2 h-[44px] items-center">
               {(['male', 'female'] as const).map((g) => (
-                <button key={g} type="button" onClick={() => setGender(g)}
-                  className={`flex-1 py-1.5 rounded-lg text-sm font-semibold border transition-colors ${
+                <button key={g} type="button" onClick={() => setGenderWithHaptic(g)}
+                  className={`flex-1 h-full rounded-2xl text-sm font-bold border transition-all active:scale-95 ${
                     gender === g
-                      ? 'bg-[#0F9E75] text-white border-[#0F9E75]'
-                      : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-600'
+                      ? 'bg-[#0F9E75] text-white border-[#0F9E75] shadow-lg shadow-[#0F9E75]/20'
+                      : 'bg-white/50 backdrop-blur-sm text-zinc-500 border-zinc-200'
                   }`}>
                   {g === 'male' ? i.male : i.female}
                 </button>
@@ -179,11 +193,14 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
         <p className="text-sm font-semibold text-zinc-700 mb-2">{i.cookingStyle}</p>
         <div className="grid grid-cols-3 gap-2">
           {COOKING_STYLE_OPTIONS.map(({ value }) => (
-            <button key={value} type="button" onClick={() => setCookingStyle(value)}
-              className={`flex flex-col items-center text-center px-2 py-3 rounded-xl text-sm border transition-colors gap-1 ${
+            <button key={value} type="button" onClick={() => {
+              if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(5);
+              setCookingStyle(value);
+            }}
+              className={`flex flex-col items-center text-center px-2 py-3 rounded-2xl text-sm border transition-all active:scale-95 gap-1 ${
                 cookingStyle === value
-                  ? 'bg-[#0F9E75] text-white border-[#0F9E75]'
-                  : 'bg-white text-zinc-700 border-zinc-300 hover:border-[#0F9E75]'
+                  ? 'bg-[#0F9E75] text-white border-[#0F9E75] shadow-lg shadow-[#0F9E75]/20'
+                  : 'bg-white/50 backdrop-blur-sm text-zinc-700 border-zinc-200 hover:border-[#0F9E75]'
               }`}>
               <span className="font-bold">{t.cookingStyle[value]}</span>
               <span className={`text-[10px] leading-tight ${cookingStyle === value ? 'text-white/80' : 'text-zinc-400'}`}>
@@ -253,11 +270,11 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
         <p className="text-sm font-semibold text-zinc-700 mb-2">{i.goal}</p>
         <div className="flex gap-2 flex-wrap">
           {GOAL_OPTIONS.map(({ value }) => (
-            <button key={value} type="button" onClick={() => setGoal(value)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+            <button key={value} type="button" onClick={() => setGoalWithHaptic(value)}
+              className={`px-4 py-2.5 rounded-2xl text-sm font-bold border transition-all active:scale-95 ${
                 goal === value
-                  ? 'bg-[#0F9E75] text-white border-[#0F9E75]'
-                  : 'bg-white text-zinc-700 border-zinc-300 hover:border-[#0F9E75]'
+                  ? 'bg-[#0F9E75] text-white border-[#0F9E75] shadow-lg shadow-[#0F9E75]/20'
+                  : 'bg-white/50 backdrop-blur-sm text-zinc-700 border-zinc-200 hover:border-[#0F9E75]'
               }`}>
               {t.settings.goalLabels[value]}
             </button>
@@ -289,10 +306,17 @@ function Field({ label, value, onChange, placeholder }: {
   label: string; value: string; onChange: (v: string) => void; placeholder: string
 }) {
   return (
-    <div className="space-y-1">
-      <label className="text-xs font-semibold text-zinc-600">{label}</label>
-      <input type="number" step="any" value={value} onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder} className="input-field" />
+    <div className="space-y-1.5">
+      <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight pl-1">{label}</label>
+      <input 
+        type="number" 
+        step="any" 
+        inputMode="decimal"
+        value={value} 
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder} 
+        className="w-full h-12 px-4 rounded-2xl bg-white/50 backdrop-blur-sm border border-zinc-200 focus:border-[#0F9E75] focus:ring-0 text-slate-800 font-bold transition-all" 
+      />
     </div>
   )
 }

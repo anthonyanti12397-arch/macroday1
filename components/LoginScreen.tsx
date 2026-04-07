@@ -8,7 +8,7 @@ import Logo from './Logo'
 import { Phone, Mail, Chrome, ArrowRight, Users } from 'lucide-react'
 
 interface LoginScreenProps {
-  onLogin: () => void
+  onLogin: (data?: any) => void
 }
 
 function randomGuestId(): string {
@@ -62,7 +62,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     saveGuestSession(session)
     setTimeout(() => {
       setLoading(false)
-      onLogin()
+      onLogin(session)
     }, 600)
   }
 

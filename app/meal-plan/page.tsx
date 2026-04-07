@@ -8,7 +8,9 @@ import {
   saveWeeklyPlan, getLatestWeeklyPlan,
   saveDailyMeals, getTodayDailyMeals, updateMealImage,
   incrementUsage, getTodayUsage,
+  saveToStatsCache, getFromStatsCache,
 } from '@/lib/storage'
+import { generateStatsHash, getMemoryCache, setMemoryCache } from '@/lib/cache'
 import type { InBodyRecord, UserProfile, WeeklyPlan, DailyMeals, Meal } from '@/lib/types'
 import MealPlanGrid from '@/components/MealPlanGrid'
 import MealCard from '@/components/MealCard'
@@ -16,6 +18,8 @@ import UpgradePrompt from '@/components/UpgradePrompt'
 import UsageCounter from '@/components/UsageCounter'
 import { useLang } from '@/contexts/LangContext'
 import { FREE_DAILY_LIMIT, BETA_MODE } from '@/lib/constants'
+import { toast } from 'sonner'
+import { MealCardSkeleton } from '@/components/Skeleton'
 
 async function fetchImage(mealName: string, imagePrompt?: string): Promise<string | null> {
   try {
@@ -97,30 +101,64 @@ export default function MealPlanPage() {
       }
     }
 
+    const cacheHash = generateStatsHash(currentInbody, currentProfile, lang)
+    
+    // 1. Check memory cache (fastest)
+    const mem = getMemoryCache(cacheHash + '_daily')
+    if (mem && !force) {
+      setDailyMeals(mem)
+      generateImages(mem)
+      return
+    }
+
+    // 2. Check stats-hash cache (localStorage)
     if (!force) {
-      const cached = getTodayDailyMeals()
-      if (cached) {
-        setDailyMeals(cached)
-        generateImages(cached)
+      const statsCached = getFromStatsCache<DailyMeals>(cacheHash + '_daily')
+      if (statsCached) {
+        setDailyMeals(statsCached)
+        setMemoryCache(cacheHash + '_daily', statsCached)
+        generateImages(statsCached)
+        return
+      }
+    }
+
+    if (!force) {
+      const legacyCached = getTodayDailyMeals()
+      if (legacyCached) {
+        setDailyMeals(legacyCached)
+        generateImages(legacyCached)
         return
       }
     }
 
     setLoadingToday(true)
     setErrorToday('')
-    try {
-      const res = await fetch('/api/generate-daily', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inbody: currentInbody, profile: currentProfile, lang }),
-      })
+    
+    const promise = fetch('/api/generate-daily', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inbody: currentInbody, profile: currentProfile, lang }),
+    }).then(async res => {
       const data = await res.json() as DailyMeals | { error: string }
       if ('error' in data) throw new Error(data.error)
       saveDailyMeals(data)
+      saveToStatsCache(cacheHash + '_daily', data)
+      setMemoryCache(cacheHash + '_daily', data)
       setDailyMeals(data)
       incrementUsage()
       setUsageKey((k) => k + 1)
       generateImages(data)
+      return data
+    })
+
+    toast.promise(promise, {
+      loading: lang === 'zh' ? '正在為您設計餐單...' : 'Designing your meals...',
+      success: lang === 'zh' ? '餐單生成成功！' : 'Meals generated successfully!',
+      error: (err) => err.message || (lang === 'zh' ? '生成失敗' : 'Generation failed')
+    })
+
+    try {
+      await promise
     } catch (err) {
       setErrorToday(err instanceof Error ? err.message : 'Failed to generate meals')
     } finally {
@@ -133,18 +171,44 @@ export default function MealPlanPage() {
     if (!inbody || !currentProfile) return
     if (!currentProfile.isPro && !BETA_MODE) { setShowUpgrade(true); return }
 
+    const cacheHash = generateStatsHash(inbody, currentProfile, lang)
+    
+    // Check cache first
+    const mem = getMemoryCache(cacheHash + '_weekly')
+    if (mem) { setPlan(mem); return }
+    
+    const statsCached = getFromStatsCache<WeeklyPlan>(cacheHash + '_weekly')
+    if (statsCached) {
+      setPlan(statsCached)
+      setMemoryCache(cacheHash + '_weekly', statsCached)
+      return
+    }
+
     setLoadingWeek(true)
     setErrorWeek('')
-    try {
-      const res = await fetch('/api/generate-meals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inbody, profile: currentProfile, lang }),
-      })
+    
+    const promise = fetch('/api/generate-meals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inbody, profile: currentProfile, lang }),
+    }).then(async res => {
       const data = await res.json() as WeeklyPlan | { error: string }
       if ('error' in data) throw new Error(data.error)
       saveWeeklyPlan(data)
+      saveToStatsCache(cacheHash + '_weekly', data)
+      setMemoryCache(cacheHash + '_weekly', data)
       setPlan(data)
+      return data
+    })
+
+    toast.promise(promise, {
+      loading: lang === 'zh' ? '正在生成一週計畫...' : 'Generating weekly plan...',
+      success: lang === 'zh' ? '一週計畫已就緒！' : 'Weekly plan is ready!',
+      error: (err) => err.message || (lang === 'zh' ? '生成失敗' : 'Generation failed')
+    })
+
+    try {
+      await promise
     } catch (err) {
       setErrorWeek(err instanceof Error ? err.message : 'Failed to generate plan')
     } finally {
@@ -232,20 +296,9 @@ export default function MealPlanPage() {
           {/* Skeleton */}
           {loadingToday && (
             <div className="space-y-4">
-              {['breakfast', 'lunch', 'dinner'].map((label) => (
-                <div key={label} className="card-lg overflow-hidden">
-                  <div className="h-52 bg-slate-100 animate-pulse" />
-                  <div className="p-4 space-y-3">
-                    <div className="h-3 w-16 bg-slate-100 rounded-full animate-pulse" />
-                    <div className="h-5 w-48 bg-slate-100 rounded-full animate-pulse" />
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="h-6 w-14 bg-slate-100 rounded-lg animate-pulse" />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
+              <MealCardSkeleton />
+              <MealCardSkeleton />
+              <MealCardSkeleton />
             </div>
           )}
 

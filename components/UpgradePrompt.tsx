@@ -1,7 +1,7 @@
 'use client'
 
 import { saveUserProfile, getUserProfile } from '@/lib/storage'
-import { X, Zap, Infinity, Calendar, ShoppingCart, TrendingUp } from 'lucide-react'
+import { X, Zap, Infinity, Calendar, ShoppingCart, TrendingUp, Sparkles } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 
 interface UpgradePromptProps {
@@ -10,7 +10,7 @@ interface UpgradePromptProps {
 }
 
 export default function UpgradePrompt({ onClose, onUpgrade }: UpgradePromptProps) {
-  const { t } = useLang()
+  const { lang, t } = useLang()
   const u = t.upgrade
 
   function handleUpgrade() {
@@ -54,10 +54,16 @@ export default function UpgradePrompt({ onClose, onUpgrade }: UpgradePromptProps
           ))}
         </ul>
 
+        <div className="bg-[#7F77DD]/10 border border-[#7F77DD]/20 rounded-2xl p-4 mb-6 text-center">
+            <p className="text-[10px] font-black text-[#7F77DD] uppercase tracking-[0.2em] mb-1">Limited Beta Offer</p>
+            <p className="text-2xl font-black text-[#7F77DD] tracking-tight">$1 <span className="text-sm font-bold opacity-60">Lifetime</span></p>
+            <p className="text-[10px] font-bold text-[#7F77DD]/60 mt-1">One-time payment. Forever access.</p>
+        </div>
+
         <button onClick={handleUpgrade}
-          className="w-full font-bold py-3.5 rounded-2xl text-white transition-opacity hover:opacity-90"
-          style={{ background: 'linear-gradient(135deg, #7F77DD 0%, #9B8FE8 100%)', boxShadow: '0 4px 14px rgba(127,119,221,0.4)' }}>
-          {u.btn}
+          className="w-full font-black py-4 rounded-2xl text-white transition-all active:scale-95 shadow-lg shadow-[#7F77DD]/20"
+          style={{ background: 'linear-gradient(135deg, #7F77DD 0%, #9B8FE8 100%)' }}>
+          {lang === 'zh' ? '立即解鎖 $1 限時優惠' : 'Unlock $1 Lifetime Deal'}
         </button>
 
         <button onClick={onClose} className="w-full mt-3 text-sm text-slate-400 hover:text-slate-600 transition-colors py-2">

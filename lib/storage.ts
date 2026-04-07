@@ -11,6 +11,7 @@ const KEYS = {
   DAILY_MEALS: 'fuelweek_daily_meals',
   SESSION: 'macroday_session',
   LANG: 'macroday_lang',
+  MEAL_PLAN_CACHE: 'macroday_meal_plan_cache', // New key for hashed cache
 } as const
 
 // ── InBody ────────────────────────────────────────────────────────────────────
@@ -174,6 +175,41 @@ export function updateMealImage(mealType: 'breakfast' | 'lunch' | 'dinner', imag
     localStorage.setItem(KEYS.DAILY_MEALS, JSON.stringify(meals))
   } catch {
     // SSR or storage unavailable
+  }
+}
+
+// ── Cache by Stats Hash ────────────────────────────────────────────────────────
+// This cache allows instant retrieval if the user's InBody/Profile haven't changed.
+
+export function saveToStatsCache(hash: string, data: WeeklyPlan | DailyMeals): void {
+  try {
+    const raw = localStorage.getItem(KEYS.MEAL_PLAN_CACHE)
+    const cache = raw ? JSON.parse(raw) : {}
+    cache[hash] = { data, timestamp: Date.now() }
+    localStorage.setItem(KEYS.MEAL_PLAN_CACHE, JSON.stringify(cache))
+  } catch {
+    // Storage unavailable
+  }
+}
+
+export function getFromStatsCache<T>(hash: string): T | null {
+  try {
+    const raw = localStorage.getItem(KEYS.MEAL_PLAN_CACHE)
+    if (!raw) return null
+    const cache = JSON.parse(raw)
+    const item = cache[hash]
+    if (!item) return null
+    
+    // Auto-expire after 3 days
+    if (Date.now() - item.timestamp > 3 * 24 * 60 * 60 * 1000) {
+      delete cache[hash]
+      localStorage.setItem(KEYS.MEAL_PLAN_CACHE, JSON.stringify(cache))
+      return null
+    }
+    
+    return item.data as T
+  } catch {
+    return null
   }
 }
 

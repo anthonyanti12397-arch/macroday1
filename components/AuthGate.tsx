@@ -1,29 +1,35 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { SessionProvider, useSession } from 'next-auth/react'
-import { getGuestSession } from '@/lib/storage'
+import { useGuestSession } from '@/hooks/useGuestSession'
 import LoginScreen from './LoginScreen'
+import LoadingScreen from './LoadingScreen'
 
 function AuthGateInner({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(false)
-  const [guestLoggedIn, setGuestLoggedIn] = useState(false)
   const { data: session, status } = useSession()
+  const { isGuest, loginAsGuest, isHydrated } = useGuestSession()
 
-  useEffect(() => {
-    setGuestLoggedIn(!!getGuestSession())
-    setReady(true)
-  }, [])
-
-  // Wait for both local check and NextAuth to resolve
-  if (!ready || status === 'loading') return null
-
-  const isLoggedIn = guestLoggedIn || !!session
-
-  if (!isLoggedIn) {
-    return <LoginScreen onLogin={() => setGuestLoggedIn(true)} />
+  // 1. Wait for hydration (reading localStorage) and NextAuth status
+  if (!isHydrated || status === 'loading') {
+    return <LoadingScreen />
   }
 
+  // 2. Either authenticated via Google OR Guest session from localStorage exists
+  const isLoggedIn = !!session || isGuest
+
+  if (!isLoggedIn) {
+    // Note: LoginScreen might need update to handle loginAsGuest
+    return (
+      <LoginScreen onLogin={(data) => {
+        if (data?.isGuest) {
+          loginAsGuest(data)
+        }
+        // Force refresh or state update is handled by the component internal logic
+      }} />
+    )
+  }
+
+  // 3. User is authorized
   return <>{children}</>
 }
 
