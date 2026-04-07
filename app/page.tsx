@@ -13,7 +13,7 @@ import MacroBar from '@/components/MacroBar'
 import UpgradePrompt from '@/components/UpgradePrompt'
 import { useSession } from 'next-auth/react'
 import { BETA_MODE } from '@/lib/constants'
-import BuyMeACoffee from '@/components/BuyMeACoffee'
+import DonationBox from '@/components/DonationBox'
 import ShareButton from '@/components/ShareButton'
 import ComplianceCalendar from '@/components/ComplianceCalendar'
 
@@ -182,8 +182,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Buy Me a Coffee */}
-          <BuyMeACoffee />
+          {/* Support Developer */}
+          <DonationBox />
 
           {/* Daily targets */}
           <div className="card-lg p-6 bg-white/70 backdrop-blur-xl border-white/40 shadow-sm transition-all hover:shadow-md">

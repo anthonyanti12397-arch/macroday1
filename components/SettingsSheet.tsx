@@ -9,7 +9,7 @@ import {
 import { clearSession, getUserProfile, getGuestSession } from '@/lib/storage'
 import { useSession } from 'next-auth/react'
 import { BETA_MODE } from '@/lib/constants'
-import BuyMeACoffee from '@/components/BuyMeACoffee'
+import DonationBox from '@/components/DonationBox'
 import { useLang } from '@/contexts/LangContext'
 import UpgradePrompt from './UpgradePrompt'
 import Logo from './Logo'
@@ -166,7 +166,7 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
               )}
 
               {/* ── Support ──────────────────────────────────────────── */}
-              <BuyMeACoffee variant="button" />
+              <DonationBox />
 
               {/* ── Logout ───────────────────────────────────────────── */}
               <div className="pt-2">

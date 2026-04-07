@@ -10,9 +10,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 })
   }
   try {
-    const { userId } = await req.json()
+    const { userId, mode = 'pro', amount } = await req.json()
 
-    // 1. Create Checkout Session
+    // Determine price based on mode
+    let unitAmount = 100 // Default $1.00
+    let productName = 'MacroDay Lifetime Pro'
+    let productDesc = 'Unlimited meals, historical charts, and full recipe access.'
+
+    if (mode === 'donate' && amount) {
+      unitAmount = Math.round(amount * 100) // amount in USD to cents
+      productName = 'MacroDay Donation'
+      productDesc = 'Support the developer and future MacroDay updates ❤️'
+    }
+
+    // Create Checkout Session
     const session = await stripeInstance.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -20,19 +31,22 @@ export async function POST(req: Request) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'MacroDay Lifetime Pro',
-              description: 'Unlimited meals, historical charts, and full recipe access.',
+              name: productName,
+              description: productDesc,
             },
-            unit_amount: 100, // $1.00 USD
+            unit_amount: unitAmount,
           },
           quantity: 1,
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXTAUTH_URL}/upgrade/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: mode === 'donate' 
+        ? `${process.env.NEXTAUTH_URL}/?donated=true`
+        : `${process.env.NEXTAUTH_URL}/upgrade/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXTAUTH_URL}/`,
       metadata: {
         userId,
+        mode,
       },
     })
 
