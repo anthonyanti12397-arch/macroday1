@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle, Sparkles, ChevronRight } from 'lucide-react'
+import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle, Sparkles, ChevronRight, TrendingUp } from 'lucide-react'
 import Logo from '@/components/Logo'
 import SettingsSheet from '@/components/SettingsSheet'
 import { useLang } from '@/contexts/LangContext'
@@ -16,6 +16,9 @@ import { BETA_MODE } from '@/lib/constants'
 import DonationBox from '@/components/DonationBox'
 import ShareButton from '@/components/ShareButton'
 import ComplianceCalendar from '@/components/ComplianceCalendar'
+import ProgressRing from '@/components/ProgressRing'
+import StreakBadge from '@/components/StreakBadge'
+import PushPermissionBanner from '@/components/PushPermissionBanner'
 
 function estimateBMR(r: InBodyRecord): number {
   if (r.bmr) return r.bmr
@@ -86,12 +89,15 @@ export default function DashboardPage() {
           <p className="text-xs font-semibold text-[#0F9E75] tracking-wide uppercase">{t.greeting(new Date().getHours())}</p>
           <Logo lang={lang} size="md" />
         </div>
-        <button
-          onClick={() => setShowSettings(true)}
-          className="p-2.5 rounded-2xl bg-white border border-slate-200 hover:border-[#0F9E75] transition-colors"
-          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-          <Settings size={18} className="text-slate-500" />
-        </button>
+        <div className="flex items-center gap-2">
+          <StreakBadge />
+          <button
+            onClick={() => setShowSettings(true)}
+            className="p-2.5 rounded-2xl bg-white border border-slate-200 hover:border-[#0F9E75] transition-colors"
+            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <Settings size={18} className="text-slate-500" />
+          </button>
+        </div>
       </div>
 
       {/* Beta banner */}
@@ -103,6 +109,9 @@ export default function DashboardPage() {
           </p>
         </div>
       )}
+
+      {/* Push permission banner */}
+      <PushPermissionBanner />
 
       {/* Guest data warning */}
       {isGuest && status !== 'authenticated' && !guestWarningDismissed && (
@@ -205,6 +214,35 @@ export default function DashboardPage() {
 
           {/* Compliance Tracker */}
           <ComplianceCalendar />
+
+          {/* Today's nutrition progress rings */}
+          {todayMeals && targets && (() => {
+            const total = (['breakfast', 'lunch', 'dinner'] as const).reduce(
+              (acc, mt) => ({
+                cal: acc.cal + (todayMeals[mt].calories ?? 0),
+                p: acc.p + (todayMeals[mt].protein ?? 0),
+                c: acc.c + (todayMeals[mt].carbs ?? 0),
+                f: acc.f + (todayMeals[mt].fat ?? 0),
+              }),
+              { cal: 0, p: 0, c: 0, f: 0 }
+            )
+            return (
+              <div className="card-lg p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp size={14} className="text-[#0F9E75]" />
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-500">
+                    {lang === 'zh' ? '今日達成率' : "Today's Progress"}
+                  </p>
+                </div>
+                <div className="flex justify-around">
+                  <ProgressRing value={total.cal} target={targets.calories} label={lang === 'zh' ? '卡路里' : 'Calories'} unit="kcal" color="#0F9E75" />
+                  <ProgressRing value={total.p} target={targets.protein} label={lang === 'zh' ? '蛋白質' : 'Protein'} unit="g" color="#0BD68A" />
+                  <ProgressRing value={total.c} target={targets.carbs} label={lang === 'zh' ? '碳水' : 'Carbs'} unit="g" color="#E09B20" />
+                  <ProgressRing value={total.f} target={targets.fat} label={lang === 'zh' ? '脂肪' : 'Fat'} unit="g" color="#D85A30" />
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Today's meals status card */}
           <Link href="/meal-plan" className="block">

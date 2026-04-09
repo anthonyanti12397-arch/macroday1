@@ -5,6 +5,7 @@ import { APP_NAME } from '@/lib/constants'
 import BottomNav from '@/components/BottomNav'
 import AuthGate from '@/components/AuthGate'
 import { LangProvider } from '@/contexts/LangContext'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import { Toaster } from 'sonner'
 import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${inter.className} min-h-screen bg-slate-50 antialiased`}>
+        <ThemeProvider>
         <LangProvider>
           <AuthGate>
             <main className="pb-24 max-w-2xl mx-auto px-4 pt-safe">
@@ -50,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <PWAInstallPrompt />
           </AuthGate>
         </LangProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

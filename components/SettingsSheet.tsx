@@ -4,13 +4,14 @@ import { useState } from 'react'
 import Link from 'next/link'
 import {
   X, LogOut, Globe, Activity, Zap, Bell, Palette,
-  ChevronRight, Crown, User, Check,
+  ChevronRight, Crown, User, Check, Sun, Moon, Monitor,
 } from 'lucide-react'
 import { clearSession, getUserProfile, getGuestSession } from '@/lib/storage'
 import { useSession } from 'next-auth/react'
 import { BETA_MODE } from '@/lib/constants'
 import DonationBox from '@/components/DonationBox'
 import { useLang } from '@/contexts/LangContext'
+import { useTheme } from '@/contexts/ThemeContext'
 import UpgradePrompt from './UpgradePrompt'
 import Logo from './Logo'
 
@@ -21,6 +22,7 @@ interface SettingsSheetProps {
 
 export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps) {
   const { lang, setLang, t } = useLang()
+  const { theme, setTheme } = useTheme()
   const s = t.settings
   const profile = getUserProfile()
   const session = getGuestSession()
@@ -45,11 +47,12 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
 
         {/* Sheet */}
         <div
-          className="relative w-full bg-white rounded-t-3xl overflow-hidden"
+          className="relative w-full rounded-t-3xl overflow-hidden"
+          style={{ background: 'var(--bg-card)' }}
           style={{ maxHeight: '92vh', boxShadow: '0 -8px 40px rgba(0,0,0,0.15)' }}
         >
           {/* Handle */}
-          <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-3" />
+          <div className="w-12 h-1.5 rounded-full mx-auto mt-3" style={{ background: 'var(--border-card)' }} />
 
           <div className="overflow-y-auto" style={{ maxHeight: 'calc(92vh - 20px)' }}>
             {/* Header */}
@@ -134,7 +137,29 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
 
               {/* ── App ──────────────────────────────────────────────── */}
               <Section title={s.appSection} icon={Palette}>
-                <Row label={s.appearance} badge={s.comingSoon} />
+                <div className="px-4 py-3.5">
+                  <span className="text-sm font-medium text-slate-700 block mb-2.5">{s.appearance}</span>
+                  <div className="flex gap-2">
+                    {([
+                      { value: 'system', icon: Monitor, label: lang === 'zh' ? '自動' : 'Auto' },
+                      { value: 'light',  icon: Sun,     label: lang === 'zh' ? '淺色' : 'Light' },
+                      { value: 'dark',   icon: Moon,    label: lang === 'zh' ? '深色' : 'Dark' },
+                    ] as const).map(({ value, icon: Icon, label }) => (
+                      <button
+                        key={value}
+                        onClick={() => setTheme(value)}
+                        className={`flex-1 flex flex-col items-center gap-1.5 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                          theme === value
+                            ? 'bg-[#0F9E75] text-white border-[#0F9E75]'
+                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-[#0F9E75]'
+                        }`}
+                      >
+                        <Icon size={15} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <Row label={s.notifications} icon={Bell} badge={s.comingSoon} />
               </Section>
 
@@ -223,8 +248,8 @@ function Section({
         <Icon size={12} className="text-slate-400" />
         <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{title}</p>
       </div>
-      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-50"
-        style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div className="rounded-2xl border overflow-hidden divide-y"
+        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-card)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
         {children}
       </div>
     </div>
@@ -243,7 +268,7 @@ function Row({
   return (
     <div className="flex items-center gap-3 px-4 py-3.5">
       {Icon && <Icon size={15} className="text-slate-400 shrink-0" />}
-      <span className="flex-1 text-sm font-medium text-slate-700">{label}</span>
+      <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</span>
       {badge && (
         <span className="text-[10px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full">{badge}</span>
       )}
