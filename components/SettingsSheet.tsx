@@ -48,8 +48,7 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
         {/* Sheet */}
         <div
           className="relative w-full rounded-t-3xl overflow-hidden"
-          style={{ background: 'var(--bg-card)' }}
-          style={{ maxHeight: '92vh', boxShadow: '0 -8px 40px rgba(0,0,0,0.15)' }}
+          style={{ background: 'var(--bg-card)', maxHeight: '92vh', boxShadow: '0 -8px 40px rgba(0,0,0,0.15)' }}
         >
           {/* Handle */}
           <div className="w-12 h-1.5 rounded-full mx-auto mt-3" style={{ background: 'var(--border-card)' }} />
