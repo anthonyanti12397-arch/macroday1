@@ -2,13 +2,15 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { RefreshCw, UtensilsCrossed } from 'lucide-react'
+import { RefreshCw, UtensilsCrossed, Heart, Clock } from 'lucide-react'
+import Image from 'next/image'
 import {
   getLatestInBody, getUserProfile,
   saveWeeklyPlan, getLatestWeeklyPlan,
   saveDailyMeals, getTodayDailyMeals, updateMealImage,
   incrementUsage, getTodayUsage,
   saveToStatsCache, getFromStatsCache,
+  getFavorites,
 } from '@/lib/storage'
 import { generateStatsHash, getMemoryCache, setMemoryCache } from '@/lib/cache'
 import type { InBodyRecord, UserProfile, WeeklyPlan, DailyMeals, Meal } from '@/lib/types'
@@ -40,7 +42,7 @@ async function fetchImage(mealName: string, imagePrompt?: string): Promise<strin
 export default function MealPlanPage() {
   const { lang, t } = useLang()
   const mp = t.mealPlan
-  const [tab, setTab] = useState<'today' | 'week'>('today')
+  const [tab, setTab] = useState<'today' | 'week' | 'saved'>('today')
 
   const [inbody, setInbody] = useState<InBodyRecord | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -60,6 +62,7 @@ export default function MealPlanPage() {
   // Shared
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
+  const [swapping, setSwapping] = useState<Record<string, boolean>>({})
 
   const generateImages = useCallback(async (meals: DailyMeals) => {
     const mealTypes = ['breakfast', 'lunch', 'dinner'] as const
@@ -105,6 +108,39 @@ export default function MealPlanPage() {
       }
     }
   }, [])
+
+  async function swapMeal(mealType: 'breakfast' | 'lunch' | 'dinner') {
+    const currentProfile = getUserProfile()
+    const currentInbody = getLatestInBody()
+    if (!currentInbody || !currentProfile || !dailyMeals) return
+    setSwapping((prev) => ({ ...prev, [mealType]: true }))
+    try {
+      const res = await fetch('/api/swap-meal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inbody: currentInbody,
+          profile: currentProfile,
+          mealType,
+          currentMealName: dailyMeals[mealType].name,
+          lang,
+        }),
+      })
+      const newMeal = await res.json() as import('@/lib/types').Meal
+      if ('error' in newMeal) throw new Error()
+      setDailyMeals((prev) => prev ? { ...prev, [mealType]: newMeal } : prev)
+      saveDailyMeals({ ...dailyMeals, [mealType]: newMeal })
+      toast.success(lang === 'zh' ? `${mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐'}已換！` : `${mealType} swapped!`)
+      // Generate image for new meal
+      fetchImage(newMeal.name, newMeal.imagePrompt).then((url) => {
+        if (url) setDailyMeals((prev) => prev ? { ...prev, [mealType]: { ...prev[mealType], imageUrl: url } } : prev)
+      })
+    } catch {
+      toast.error(lang === 'zh' ? '換餐失敗，請重試' : 'Swap failed, please try again')
+    } finally {
+      setSwapping((prev) => ({ ...prev, [mealType]: false }))
+    }
+  }
 
   useEffect(() => {
     setInbody(getLatestInBody())
@@ -272,6 +308,7 @@ export default function MealPlanPage() {
 
   const loading = tab === 'today' ? loadingToday : loadingWeek
   const handleGenerate = tab === 'today' ? () => generateToday(!!dailyMeals) : generateWeek
+  const showGenerateBtn = tab !== 'saved'
 
   return (
     <div className="py-6 space-y-5">
@@ -288,33 +325,39 @@ export default function MealPlanPage() {
             </div>
           )}
         </div>
-        <button
-          onClick={handleGenerate}
-          disabled={loading}
-          className="btn-primary shrink-0 px-4 py-2.5 text-sm gap-1.5"
-          style={{ borderRadius: '14px' }}
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          {tab === 'today'
-            ? (dailyMeals ? t.btn.regenerate : t.btn.generate)
-            : (plan ? t.btn.regenerate : t.btn.generate)
-          }
-        </button>
+        {showGenerateBtn && (
+          <button
+            onClick={handleGenerate}
+            disabled={loading}
+            className="btn-primary shrink-0 px-4 py-2.5 text-sm gap-1.5"
+            style={{ borderRadius: '14px' }}
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            {tab === 'today'
+              ? (dailyMeals ? t.btn.regenerate : t.btn.generate)
+              : (plan ? t.btn.regenerate : t.btn.generate)
+            }
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-slate-100 rounded-2xl">
-        {(['today', 'week'] as const).map((t_) => (
+        {([
+          { key: 'today', label: mp.tabToday },
+          { key: 'week', label: mp.tabWeek },
+          { key: 'saved', label: lang === 'zh' ? '已收藏' : 'Saved' },
+        ] as const).map(({ key, label }) => (
           <button
-            key={t_}
-            onClick={() => setTab(t_)}
+            key={key}
+            onClick={() => setTab(key)}
             className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all ${
-              tab === t_
+              tab === key
                 ? 'bg-white text-slate-900 shadow-sm'
                 : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            {t_ === 'today' ? mp.tabToday : mp.tabWeek}
+            {label}
           </button>
         ))}
       </div>
@@ -363,6 +406,8 @@ export default function MealPlanPage() {
                     mealType={mealTypeLabel}
                     imageLoading={imagesLoading[type] ?? false}
                     mealKey={type}
+                    onSwap={() => swapMeal(type)}
+                    swapping={swapping[type] ?? false}
                   />
                 )
               })}
@@ -450,6 +495,11 @@ export default function MealPlanPage() {
         </>
       )}
 
+      {/* SAVED TAB */}
+      {tab === 'saved' && (
+        <SavedMealsTab lang={lang} />
+      )}
+
       {showUpgrade && (
         <UpgradePrompt
           onClose={() => setShowUpgrade(false)}
@@ -465,6 +515,59 @@ export default function MealPlanPage() {
         trigger={showCelebration}
         onComplete={() => setShowCelebration(false)}
       />
+    </div>
+  )
+}
+
+function SavedMealsTab({ lang }: { lang: string }) {
+  const [favorites, setFavorites] = useState<import('@/lib/types').Meal[]>([])
+
+  useEffect(() => {
+    setFavorites(getFavorites())
+  }, [])
+
+  if (favorites.length === 0) {
+    return (
+      <div className="card-lg p-10 text-center space-y-3">
+        <div className="w-14 h-14 rounded-3xl bg-[#E8F5F0] flex items-center justify-center mx-auto">
+          <Heart size={24} className="text-[#0F9E75]" />
+        </div>
+        <p className="font-bold text-slate-700">{lang === 'zh' ? '還沒有收藏' : 'No saved meals yet'}</p>
+        <p className="text-sm text-slate-400">{lang === 'zh' ? '在餐單上點擊 ♡ 收藏喜歡的餐點' : 'Tap ♡ on any meal card to save it here'}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">
+        {favorites.length} {lang === 'zh' ? '個收藏餐點' : 'saved meals'}
+      </p>
+      {favorites.map((meal, i) => (
+        <div key={i} className="card-lg p-4 space-y-3">
+          {meal.imageUrl && (
+            <div className="relative h-32 rounded-xl overflow-hidden">
+              <Image src={meal.imageUrl} alt={meal.name} fill className="object-cover" />
+            </div>
+          )}
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-bold text-slate-800 text-sm">{meal.name}</p>
+            <div className="flex items-center gap-1 shrink-0">
+              <Clock size={11} className="text-slate-400" />
+              <span className="text-xs text-slate-400">{meal.cookingTime}min</span>
+            </div>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <span className="tag-teal">{meal.calories} kcal</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F5F0] text-[#0F9E75]">P {meal.protein}g</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">C {meal.carbs}g</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-400">F {meal.fat}g</span>
+          </div>
+          {meal.ingredients.length > 0 && (
+            <p className="text-xs text-slate-400 leading-relaxed">{meal.ingredients.slice(0, 4).join(' · ')}{meal.ingredients.length > 4 ? ' …' : ''}</p>
+          )}
+        </div>
+      ))}
     </div>
   )
 }

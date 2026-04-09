@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Activity, UtensilsCrossed, ShoppingCart } from 'lucide-react'
@@ -19,7 +20,7 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 tab-safe-bottom"
-      style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(15,158,117,0.08)' }}>
+      style={{ background: 'var(--bg-card)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '1px solid var(--border-card)' } as React.CSSProperties}>
       <div className="max-w-2xl mx-auto flex px-2">
         {tabs.map(({ href, label, icon: Icon }) => {
           const active = pathname === href

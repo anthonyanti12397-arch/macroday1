@@ -19,6 +19,9 @@ import ComplianceCalendar from '@/components/ComplianceCalendar'
 import ProgressRing from '@/components/ProgressRing'
 import StreakBadge from '@/components/StreakBadge'
 import PushPermissionBanner from '@/components/PushPermissionBanner'
+import NutritionTrend from '@/components/NutritionTrend'
+import WeeklyInsights from '@/components/WeeklyInsights'
+import WeightSparkline from '@/components/WeightSparkline'
 
 function estimateBMR(r: InBodyRecord): number {
   if (r.bmr) return r.bmr
@@ -214,6 +217,15 @@ export default function DashboardPage() {
 
           {/* Compliance Tracker */}
           <ComplianceCalendar />
+
+          {/* 7-day nutrition trend */}
+          <NutritionTrend />
+
+          {/* Weekly insights */}
+          <WeeklyInsights />
+
+          {/* Weight trend sparkline */}
+          <WeightSparkline />
 
           {/* Today's nutrition progress rings */}
           {todayMeals && targets && (() => {

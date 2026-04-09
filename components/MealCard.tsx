@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
+const CookMode = lazy(() => import('./CookMode'))
 import type { Meal } from '@/lib/types'
-import { ChevronDown, ChevronUp, Clock, Heart, CheckCircle2, ShoppingBag, UtensilsCrossed } from 'lucide-react'
+import { ChevronDown, ChevronUp, Clock, Heart, CheckCircle2, ShoppingBag, UtensilsCrossed, RefreshCw } from 'lucide-react'
 import Image from 'next/image'
 import { useLang } from '@/contexts/LangContext'
 import { toggleMealEaten, getEatenMeals, toggleFavorite, isFavorite } from '@/lib/storage'
@@ -14,14 +15,17 @@ interface MealCardProps {
   mealType: string
   imageLoading?: boolean
   mealKey?: string
+  onSwap?: () => void
+  swapping?: boolean
 }
 
-export default function MealCard({ meal, mealType, imageLoading = false, mealKey }: MealCardProps) {
+export default function MealCard({ meal, mealType, imageLoading = false, mealKey, onSwap, swapping = false }: MealCardProps) {
   const { lang, t } = useLang()
   const m = t.meal
   const [expanded, setExpanded] = useState(false)
   const [eaten, setEaten] = useState(false)
   const [fav, setFav] = useState(false)
+  const [cookMode, setCookMode] = useState(false)
 
   useEffect(() => {
     if (mealKey) setEaten(getEatenMeals().includes(mealKey))
@@ -107,8 +111,19 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
           <MacroChip value={`${meal.calories}`} label="KCAL" bg="bg-slate-50" text="text-slate-500" />
         </div>
 
-        {/* Eaten + Favorite actions */}
+        {/* Eaten + Favorite + Swap actions */}
         <div className="flex items-center gap-2.5">
+          {onSwap && (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => { e.stopPropagation(); onSwap() }}
+              disabled={swapping}
+              className="w-12 h-12 flex items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-400 hover:border-[#0F9E75] hover:text-[#0F9E75] transition-all disabled:opacity-50"
+              title={lang === 'zh' ? '換一個' : 'Swap meal'}
+            >
+              <RefreshCw size={16} className={swapping ? 'animate-spin' : ''} />
+            </motion.button>
+          )}
           {mealKey && (
             <motion.button
               whileTap={{ scale: 0.95 }}
@@ -134,6 +149,16 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
           >
             <Heart size={18} className={fav ? 'fill-red-500 text-red-500' : ''} />
           </motion.button>
+          {!meal.isTakeout && meal.steps.length > 0 && (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => { e.stopPropagation(); setCookMode(true) }}
+              className="w-12 h-12 flex items-center justify-center rounded-2xl border border-[#0F9E75]/30 bg-[#E8F5F0] text-[#0F9E75] hover:bg-[#0F9E75] hover:text-white transition-all"
+              title={lang === 'zh' ? '開始烹飪' : 'Start cooking'}
+            >
+              <UtensilsCrossed size={16} />
+            </motion.button>
+          )}
         </div>
 
         {hasTakeoutInfo && (
@@ -195,6 +220,12 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
           )}
         </AnimatePresence>
       </div>
+
+      {cookMode && (
+        <Suspense fallback={null}>
+          <CookMode meal={meal} onClose={() => setCookMode(false)} />
+        </Suspense>
+      )}
     </motion.div>
   )
 }
