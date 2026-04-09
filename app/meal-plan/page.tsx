@@ -14,6 +14,7 @@ import { generateStatsHash, getMemoryCache, setMemoryCache } from '@/lib/cache'
 import type { InBodyRecord, UserProfile, WeeklyPlan, DailyMeals, Meal } from '@/lib/types'
 import MealPlanGrid from '@/components/MealPlanGrid'
 import MealCard from '@/components/MealCard'
+import ConfettiCelebration from '@/components/ConfettiCelebration'
 import UpgradePrompt from '@/components/UpgradePrompt'
 import UsageCounter from '@/components/UsageCounter'
 import { useLang } from '@/contexts/LangContext'
@@ -58,6 +59,7 @@ export default function MealPlanPage() {
 
   // Shared
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
 
   const generateImages = useCallback(async (meals: DailyMeals) => {
     const mealTypes = ['breakfast', 'lunch', 'dinner'] as const
@@ -179,6 +181,7 @@ export default function MealPlanPage() {
       setDailyMeals(data)
       incrementUsage()
       setUsageKey((k) => k + 1)
+      setShowCelebration(true)
       generateImages(data)
       return data
     })
@@ -457,6 +460,11 @@ export default function MealPlanPage() {
           }}
         />
       )}
+
+      <ConfettiCelebration
+        trigger={showCelebration}
+        onComplete={() => setShowCelebration(false)}
+      />
     </div>
   )
 }
