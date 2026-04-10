@@ -385,7 +385,7 @@ export default function MealPlanPage() {
               <div className="flex items-center justify-between">
                 <h2 className="font-bold text-lg text-slate-900 tracking-tight">{t.dashboard.todayMeals}</h2>
                 <div className="flex items-center gap-2">
-                  <ExportPDFButton targetId="daily-meals-content" fileName={`MacroDay-Today-${new Date().toISOString().split('T')[0]}`} />
+                  <ExportPDFButton targetId="daily-meals-content" fileName={`MacroDay-Today-${(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()}`} />
                   <button
                     onClick={() => generateToday(true)}
                     className="text-xs font-semibold text-[#0F9E75] hover:text-[#0b8462] flex items-center gap-1 transition-colors"

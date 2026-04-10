@@ -25,7 +25,7 @@ export default function ComplianceCalendar() {
   const days = Array.from({ length: 28 }).map((_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (27 - i))
-    const ds = d.toISOString().split('T')[0]
+    const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     return { date: d, ds, status: history[ds] || 'none' }
   })
 
@@ -60,7 +60,7 @@ export default function ComplianceCalendar() {
           <div key={l} className="text-[10px] font-black text-slate-300 text-center uppercase">{l}</div>
         ))}
         {days.map((day, idx) => {
-          const isToday = new Date().toISOString().split('T')[0] === day.ds
+          const today = new Date(); const isToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}` === day.ds
           return (
             <motion.div
               key={day.ds}

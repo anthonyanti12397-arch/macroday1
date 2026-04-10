@@ -245,7 +245,7 @@ export function clearSession(): void {
 
 export function getEatenMeals(): string[] {
   try {
-    const key = `macroday_eaten_${new Date().toISOString().split('T')[0]}`
+    const key = `macroday_eaten_${todayStr()}`
     const raw = localStorage.getItem(key)
     if (!raw) return []
     return JSON.parse(raw) as string[]
@@ -256,7 +256,7 @@ export function getEatenMeals(): string[] {
 
 export function toggleMealEaten(mealType: string): string[] {
   try {
-    const key = `macroday_eaten_${new Date().toISOString().split('T')[0]}`
+    const key = `macroday_eaten_${todayStr()}`
     const current = getEatenMeals()
     const idx = current.indexOf(mealType)
     const updated = idx >= 0 ? current.filter((m) => m !== mealType) : [...current, mealType]
@@ -273,7 +273,7 @@ export function getComplianceHistory(days = 30): Record<string, 'full' | 'partia
   for (let i = 0; i < days; i++) {
     const d = new Date(now)
     d.setDate(d.getDate() - i)
-    const ds = d.toISOString().split('T')[0]
+    const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     const key = `macroday_eaten_${ds}`
     try {
       const raw = localStorage.getItem(key)
@@ -343,5 +343,9 @@ export function saveLang(lang: 'en' | 'zh'): void {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function todayStr(): string {
-  return new Date().toISOString().split('T')[0]
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }

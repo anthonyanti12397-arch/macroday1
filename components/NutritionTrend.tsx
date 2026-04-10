@@ -21,13 +21,13 @@ export default function NutritionTrend() {
     const history = getComplianceHistory(7)
     const dayLabelsEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     const dayLabelsZh = ['日', '一', '二', '三', '四', '五', '六']
-    const todayDs = new Date().toISOString().split('T')[0]
+    const now = new Date(); const todayDs = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
     const result: DayBar[] = []
     for (let i = 6; i >= 0; i--) {
       const d = new Date()
       d.setDate(d.getDate() - i)
-      const ds = d.toISOString().split('T')[0]
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       const labels = lang === 'zh' ? dayLabelsZh : dayLabelsEn
       result.push({
         label: labels[d.getDay()],

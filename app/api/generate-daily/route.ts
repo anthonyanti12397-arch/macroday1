@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import type { InBodyRecord, UserProfile, DailyMeals, Meal } from '@/lib/types'
 import { GROK_MODEL } from '@/lib/constants'
+import { findPoolMatch } from '@/lib/recipe-pool'
 
 function getClient() {
   return new OpenAI({
@@ -36,6 +37,19 @@ function calcTargets(inbody: InBodyRecord, goal: UserProfile['goal']) {
   return { targetCalories, targetProtein }
 }
 
+/** Build a descriptive English image prompt from meal data if the AI left it empty */
+function ensureImagePrompt(meal: Meal): Meal {
+  if (meal.imagePrompt?.trim()) return meal
+  // Derive English description from ingredients (first 3) + meal name translation hint
+  const ingEn = meal.ingredients
+    .slice(0, 3)
+    .map(i => i.replace(/[^\w\s(),]/g, ' ').trim())
+    .filter(Boolean)
+    .join(', ')
+  meal.imagePrompt = `${meal.name}${ingEn ? ` made with ${ingEn}` : ''}, Asian food photography`
+  return meal
+}
+
 function fixMacros(meal: Meal): Meal {
   const calculated = Math.round(meal.protein * 4 + meal.carbs * 4 + meal.fat * 9)
   return { ...meal, calories: calculated }
@@ -47,6 +61,13 @@ export async function POST(req: NextRequest) {
     const { inbody, profile, lang = 'zh' } = body
     const isChinese = lang === 'zh'
     const { targetCalories, targetProtein } = calcTargets(inbody, profile.goal)
+
+    // 1. FAST PATH: Check Static Pool for instant results
+    const poolMatch = findPoolMatch(targetCalories, targetProtein)
+    if (poolMatch) {
+      console.log('⚡ Pool Match Found! Returning instant result.')
+      return NextResponse.json({ ...poolMatch, date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })() })
+    }
 
     const restrictions = profile.dietaryRestrictions.length > 0
       ? profile.dietaryRestrictions.join(', ') : 'None'
@@ -117,10 +138,10 @@ export async function POST(req: NextRequest) {
     }
 
     const result: DailyMeals = {
-      date: new Date().toISOString().split('T')[0],
-      breakfast: fixMacros(parsed.breakfast),
-      lunch: fixMacros(parsed.lunch),
-      dinner: fixMacros(parsed.dinner),
+      date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })(),
+      breakfast: fixMacros(ensureImagePrompt(parsed.breakfast)),
+      lunch: fixMacros(ensureImagePrompt(parsed.lunch)),
+      dinner: fixMacros(ensureImagePrompt(parsed.dinner)),
       targetCalories,
       targetProtein,
     }

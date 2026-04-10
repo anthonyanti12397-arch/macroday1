@@ -24,7 +24,7 @@ function calcInsights(days = 7): Insights {
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date()
     d.setDate(d.getDate() - i)
-    const ds = d.toISOString().split('T')[0]
+    const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     if (history[ds] === 'full') { streak++; best = Math.max(best, streak) }
     else streak = 0
   }

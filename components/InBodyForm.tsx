@@ -120,7 +120,7 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
 
     const record: InBodyRecord = {
       id: crypto.randomUUID(),
-      date: new Date().toISOString().split('T')[0],
+      date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })(),
       weight: Number(weight), height: Number(height), age: Number(age), gender,
       ...(bodyFat ? { bodyFat: Number(bodyFat) } : {}),
       ...(muscleMass ? { skeletalMuscleMass: Number(muscleMass) } : {}),
