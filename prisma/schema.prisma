@@ -1,0 +1,41 @@
+// MacroDay — Prisma schema
+// Phase 2: uncomment datasource + add DATABASE_URL to activate persistence
+//
+// Setup steps:
+//   1. Vercel Dashboard → Storage → Create Postgres database
+//   2. Copy DATABASE_URL + POSTGRES_* vars to .env.local and Vercel env
+//   3. Run: npx prisma generate && npx prisma db push
+//   4. Uncomment datasource below
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// datasource db {
+//   provider  = "postgresql"
+//   url       = env("DATABASE_URL")
+//   directUrl = env("DIRECT_URL")    // for migrations (Vercel Postgres needs this)
+// }
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  provider  String   @default("email") // "google" | "email-otp"
+  createdAt DateTime @default(now())
+  lastLogin DateTime @updatedAt
+
+  // Future relations
+  // posts     Post[]
+  // profile   MacroProfile?
+}
+
+// Future community model
+// model Post {
+//   id        String   @id @default(cuid())
+//   authorId  String
+//   author    User     @relation(fields: [authorId], references: [id])
+//   content   String
+//   createdAt DateTime @default(now())
+// }
