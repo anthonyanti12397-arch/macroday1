@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { TrendingUp } from 'lucide-react'
 import { getComplianceHistory } from '@/lib/storage'
 import { useLang } from '@/contexts/LangContext'
+import { useTheme } from '@/contexts/ThemeContext'
 
 type DayStatus = 'full' | 'partial' | 'none'
 
@@ -15,6 +16,7 @@ interface DayBar {
 
 export default function NutritionTrend() {
   const { lang } = useLang()
+  const { isDark } = useTheme()
   const [bars, setBars] = useState<DayBar[]>([])
 
   useEffect(() => {
@@ -44,7 +46,7 @@ export default function NutritionTrend() {
   const barColor = (status: DayStatus) => {
     if (status === 'full') return '#0F9E75'
     if (status === 'partial') return '#E09B20'
-    return '#E2E8F0'
+    return isDark ? '#475569' : '#E2E8F0'
   }
 
   const barHeight = (status: DayStatus) => {
@@ -60,7 +62,7 @@ export default function NutritionTrend() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <TrendingUp size={14} className="text-[#0F9E75]" />
-          <p className="text-xs font-black uppercase tracking-wider text-slate-500">
+          <p className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
             {lang === 'zh' ? '7 天達成率' : '7-Day Compliance'}
           </p>
         </div>
@@ -96,7 +98,7 @@ export default function NutritionTrend() {
         {[
           { color: '#0F9E75', label: lang === 'zh' ? '三餐完成' : 'All 3 meals' },
           { color: '#E09B20', label: lang === 'zh' ? '部分完成' : 'Partial' },
-          { color: '#E2E8F0', label: lang === 'zh' ? '未記錄' : 'None' },
+          { color: isDark ? '#475569' : '#E2E8F0', label: lang === 'zh' ? '未記錄' : 'None' },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-sm" style={{ background: color }} />

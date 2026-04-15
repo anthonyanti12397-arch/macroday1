@@ -2,14 +2,10 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { APP_NAME } from '@/lib/constants'
-import BottomNav from '@/components/BottomNav'
-import AuthGate from '@/components/AuthGate'
-import { LangProvider } from '@/contexts/LangContext'
-import { ThemeProvider } from '@/contexts/ThemeContext'
-import { Toaster } from 'sonner'
-import PWAInstallPrompt from '@/components/PWAInstallPrompt'
+import Providers from '@/components/Providers'
+import ClientSideInit from '@/components/ClientSideInit'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
 export const viewport: Viewport = {
   themeColor: '#0F9E75',
@@ -23,6 +19,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'MacroDay · AI 每日營養教練',
   description: 'AI 驅動的一站式營養管理與餐單規劃。輕鬆計算 TDEE，三餐 AI 自動匹配你的增肌減脂目標。',
+  metadataBase: new URL(process.env.NEXTAUTH_URL ?? 'http://localhost:3000'),
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -30,6 +27,9 @@ export const metadata: Metadata = {
     title: APP_NAME,
   },
   formatDetection: { telephone: false },
+  other: {
+    'google-adsense-account': 'ca-pub-3028542923682031',
+  },
   openGraph: {
     title: 'MacroDay · AI 每日營養教練',
     description: 'AI 驅動的一站式營養管理與餐單規劃。',
@@ -40,19 +40,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} min-h-screen bg-slate-50 antialiased`}>
-        <ThemeProvider>
-        <LangProvider>
-          <AuthGate>
-            <main className="pb-24 max-w-2xl mx-auto px-4 pt-safe">
-              {children}
-            </main>
-            <BottomNav />
-            <Toaster position="top-center" richColors />
-            <PWAInstallPrompt />
-          </AuthGate>
-        </LangProvider>
-        </ThemeProvider>
+      <body className={`${inter.className} min-h-screen antialiased`}>
+        <Providers>
+          <ClientSideInit />
+          {children}
+        </Providers>
       </body>
     </html>
   )

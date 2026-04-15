@@ -1,11 +1,11 @@
 'use client'
 
-import { saveUserProfile, getUserProfile } from '@/lib/storage'
 import { X, Zap, Infinity as InfinityIcon, Calendar, ShoppingCart, TrendingUp, Sparkles } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { PRO_TRIAL_DAYS } from '@/lib/constants'
 
 interface UpgradePromptProps {
   onClose: () => void
@@ -17,13 +17,13 @@ export default function UpgradePrompt({ onClose, onUpgrade }: UpgradePromptProps
   const u = t.upgrade
   const [loading, setLoading] = useState(false)
 
-  async function handleUpgrade() {
+  async function handleUpgrade(mode: 'pro' | 'adfree' = 'pro') {
     setLoading(true)
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: 'guest_beta' }) // We can pull real ID if needed
+        body: JSON.stringify({ mode })
       })
       const data = await res.json()
       if (data.url) {
@@ -39,7 +39,7 @@ export default function UpgradePrompt({ onClose, onUpgrade }: UpgradePromptProps
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 relative">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm p-6 relative overflow-y-auto max-h-[90vh]">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
           <X size={20} />
         </button>
@@ -50,41 +50,63 @@ export default function UpgradePrompt({ onClose, onUpgrade }: UpgradePromptProps
         </div>
         <p className="text-sm text-slate-500 mb-5">{u.desc}</p>
 
-        <ul className="space-y-3 mb-6">
-          {[
-            { icon: InfinityIcon, text: u.feature1 },
-            { icon: Calendar, text: u.feature2 },
-            { icon: ShoppingCart, text: u.feature3 },
-            { icon: TrendingUp, text: u.feature4 },
-          ].map(({ icon: Icon, text }) => (
-            <li key={text} className="flex items-center gap-3 text-sm text-slate-700">
-              <Icon size={16} className="text-[#7F77DD] shrink-0" />
-              {text}
-            </li>
-          ))}
-        </ul>
+        {/* Pro Plan Primary Card */}
+        <div className="bg-gradient-to-br from-[#7F77DD] to-[#6A61D1] rounded-2xl p-5 mb-4 text-white shadow-lg shadow-purple-200 dark:shadow-none">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-widest text-white/70">PRO PLAN</span>
+            <Sparkles size={16} />
+          </div>
+          
+          <ul className="space-y-2 mb-4">
+            {[
+              { icon: InfinityIcon, text: u.feature1 },
+              { icon: Calendar, text: u.feature2 },
+              { icon: ShoppingCart, text: u.feature3 },
+              { icon: TrendingUp, text: u.feature4 },
+            ].map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-2.5 text-[11px] font-medium text-white/90">
+                <Icon size={14} className="shrink-0" />
+                {text}
+              </li>
+            ))}
+          </ul>
 
-        <div className="bg-[#7F77DD]/10 border border-[#7F77DD]/20 rounded-2xl p-4 mb-6 text-center">
-            <p className="text-[10px] font-black text-[#7F77DD] uppercase tracking-[0.2em] mb-1">Limited Beta Offer</p>
-            <p className="text-2xl font-black text-[#7F77DD] tracking-tight">$1 <span className="text-sm font-bold opacity-60">Lifetime</span></p>
-            <p className="text-[10px] font-bold text-[#7F77DD]/60 mt-1">One-time payment. Forever access.</p>
+          <div className="bg-white/10 rounded-xl p-3 mb-4 text-center">
+            <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest mb-0.5">{PRO_TRIAL_DAYS} Days Free Trial</p>
+            <p className="text-lg font-black text-white">$HK 38<span className="text-xs font-normal opacity-70"> / month</span></p>
+          </div>
+
+          <button 
+             onClick={() => handleUpgrade('pro')}
+             disabled={loading}
+             className="w-full bg-white text-[#7F77DD] font-black py-3 rounded-xl active:scale-95 transition-all disabled:opacity-50"
+          >
+            {loading ? '...' : (lang === 'zh' ? '開始免費試用' : 'Start Free Trial')}
+          </button>
         </div>
 
-        <button 
-          onClick={handleUpgrade}
-          disabled={loading}
-          className="w-full font-black py-4 rounded-2xl text-white transition-all active:scale-95 shadow-lg shadow-[#7F77DD]/20 flex items-center justify-center gap-2 disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, #7F77DD 0%, #9B8FE8 100%)' }}>
-          {loading ? (
-            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}>
-               <Sparkles size={18} />
-            </motion.div>
-          ) : (
-            lang === 'zh' ? '立即解鎖 $1 限時優惠' : 'Unlock $1 Lifetime Deal'
-          )}
-        </button>
+        {/* Ad-Free Plan Secondary Card */}
+        <div className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-4 mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
+                 <Zap size={16} fill="currentColor" />
+              </div>
+              <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{u.adFreeTitle}</span>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full">HK$8</span>
+          </div>
+          <p className="text-[10px] text-slate-400 mb-3 leading-tight">{u.adFreeDesc}</p>
+          <button 
+             onClick={() => handleUpgrade('adfree')}
+             disabled={loading}
+             className="w-full bg-[#0F9E75] text-white text-[11px] font-bold py-2.5 rounded-xl active:scale-95 transition-all disabled:opacity-50"
+          >
+            {loading ? '...' : (lang === 'zh' ? '立即移除廣告' : 'Remove Ads Now')}
+          </button>
+        </div>
 
-        <button onClick={onClose} className="w-full mt-3 text-sm text-slate-400 hover:text-slate-600 transition-colors py-2">
+        <button onClick={onClose} className="w-full mt-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-1">
           {u.later}
         </button>
       </div>

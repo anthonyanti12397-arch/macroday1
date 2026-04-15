@@ -6,6 +6,7 @@ import { saveGuestSession, saveLang } from '@/lib/storage'
 import type { GuestSession } from '@/lib/types'
 import Logo from './Logo'
 import { Mail, ArrowRight, Users, Chrome, ChevronLeft, RefreshCw } from 'lucide-react'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface LoginScreenProps {
   onLogin: (data?: GuestSession) => void
@@ -27,6 +28,7 @@ function randomGuestId(): string {
 type Step = 'landing' | 'email' | 'otp'
 
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
+  const { isDark } = useTheme()
   const systemLang = typeof navigator !== 'undefined' && navigator.language.startsWith('zh') ? 'zh' : 'en'
   const [lang, setLang] = useState<'en' | 'zh'>(systemLang)
   const [step, setStep] = useState<Step>('landing')
@@ -219,7 +221,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   return (
     <div
       className="fixed inset-0 z-[100] flex flex-col items-center justify-between px-6 py-10 overflow-y-auto"
-      style={{ background: 'linear-gradient(160deg, #EDF9F4 0%, #F8FFFE 50%, #ffffff 100%)' }}
+      style={{ background: isDark ? 'linear-gradient(160deg, #0a1628 0%, #0F172A 50%, #0F172A 100%)' : 'linear-gradient(160deg, #EDF9F4 0%, #F8FFFE 50%, #ffffff 100%)' }}
     >
       {/* Top bar */}
       <div className="w-full flex items-center justify-between">
@@ -233,7 +235,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         ) : <div />}
         <button
           onClick={() => setLang(lang === 'en' ? 'zh' : 'en')}
-          className="text-xs font-semibold text-slate-500 bg-white border border-slate-200 px-3 py-1.5 rounded-full hover:border-[#0F9E75] transition-colors"
+          className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-3 py-1.5 rounded-full hover:border-[#0F9E75] transition-colors"
         >
           {lang === 'en' ? '中文' : 'EN'}
         </button>
@@ -248,8 +250,8 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           />
           <Logo lang={lang} size="lg" className="relative" />
           <div className="space-y-2">
-            <p className="text-xl font-bold text-slate-800 leading-snug">{c.tagline}</p>
-            <p className="text-sm text-slate-500 max-w-xs">{c.sub}</p>
+            <p className="text-xl font-bold text-slate-800 dark:text-slate-200 leading-snug">{c.tagline}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs">{c.sub}</p>
           </div>
           <div className="flex flex-wrap gap-2 justify-center mt-2">
             {(lang === 'zh'
@@ -268,7 +270,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           <div className="w-16 h-16 rounded-3xl bg-[#E8F5F0] flex items-center justify-center mb-2">
             <Mail size={28} className="text-[#0F9E75]" />
           </div>
-          <p className="text-xl font-bold text-slate-800">{c.emailBtn}</p>
+          <p className="text-xl font-bold text-slate-800 dark:text-slate-200">{c.emailBtn}</p>
           <p className="text-sm text-slate-400 max-w-xs">
             {lang === 'zh' ? '輸入你的電郵，我們會發送一個驗證碼' : 'Enter your email and we\'ll send a verification code'}
           </p>
@@ -281,7 +283,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           <div className="w-16 h-16 rounded-3xl bg-[#E8F5F0] flex items-center justify-center mb-2">
             <span className="text-3xl">📬</span>
           </div>
-          <p className="text-xl font-bold text-slate-800">{c.otpTitle}</p>
+          <p className="text-xl font-bold text-slate-800 dark:text-slate-200">{c.otpTitle}</p>
           <p className="text-sm text-slate-400 max-w-xs">{c.otpSub(email)}</p>
         </div>
       )}
@@ -299,27 +301,27 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           <>
             <button
               onClick={() => { setStep('email'); setError('') }}
-              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white border border-slate-200 text-sm font-semibold text-slate-700 hover:border-[#0F9E75] transition-all"
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:border-[#0F9E75] transition-all"
               style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
             >
-              <Mail size={18} className="text-slate-500" />
+              <Mail size={18} className="text-slate-500 dark:text-slate-400" />
               <span>{c.emailBtn}</span>
-              <ArrowRight size={15} className="ml-auto text-slate-400" />
+              <ArrowRight size={15} className="ml-auto text-slate-400 dark:text-slate-500" />
             </button>
 
             <button
               onClick={() => signIn('google', { callbackUrl: '/' })}
-              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white border border-slate-200 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:shadow-sm transition-all"
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:border-slate-300 hover:shadow-sm transition-all"
               style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
             >
-              <Chrome size={18} className="text-slate-500" />
+              <Chrome size={18} className="text-slate-500 dark:text-slate-400" />
               <span>{c.google}</span>
             </button>
 
             <div className="flex items-center gap-3 py-1">
-              <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-xs text-slate-400 font-medium">{c.divider}</span>
-              <div className="flex-1 h-px bg-slate-200" />
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-600" />
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">{c.divider}</span>
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-600" />
             </div>
 
             <button
@@ -347,7 +349,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               onKeyDown={e => e.key === 'Enter' && handleSendOTP()}
               placeholder={c.emailPlaceholder}
               autoFocus
-              className="w-full px-4 py-3.5 rounded-2xl border border-slate-200 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-[#0F9E75] focus:ring-2 focus:ring-[#0F9E75]/20 transition-all"
+              className="w-full px-4 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-[#0F9E75] focus:ring-2 focus:ring-[#0F9E75]/20 transition-all"
               style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
             />
             <button

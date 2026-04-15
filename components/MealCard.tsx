@@ -2,11 +2,12 @@
 
 import { useEffect, useState, lazy, Suspense } from 'react'
 const CookMode = lazy(() => import('./CookMode'))
+import CheckInCamera from './CheckInCamera'
 import type { Meal } from '@/lib/types'
 import { ChevronDown, ChevronUp, Clock, Heart, CheckCircle2, ShoppingBag, UtensilsCrossed, RefreshCw } from 'lucide-react'
 import Image from 'next/image'
 import { useLang } from '@/contexts/LangContext'
-import { toggleMealEaten, getEatenMeals, toggleFavorite, isFavorite } from '@/lib/storage'
+import { toggleMealEaten, getEatenMeals, toggleFavorite, isFavorite, addMacroScore } from '@/lib/storage'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 
@@ -16,28 +17,56 @@ interface MealCardProps {
   imageLoading?: boolean
   mealKey?: string
   onSwap?: () => void
+  onDislike?: () => void
   swapping?: boolean
+  priority?: boolean
+  coachOpinion?: string
 }
 
-export default function MealCard({ meal, mealType, imageLoading = false, mealKey, onSwap, swapping = false }: MealCardProps) {
+export default function MealCard({ meal, mealType, imageLoading = false, mealKey, onSwap, onDislike, swapping = false, priority = false, coachOpinion }: MealCardProps) {
   const { lang, t } = useLang()
   const m = t.meal
   const [expanded, setExpanded] = useState(false)
   const [eaten, setEaten] = useState(false)
   const [fav, setFav] = useState(false)
   const [cookMode, setCookMode] = useState(false)
+  const [checkinOpen, setCheckinOpen] = useState(false)
 
   useEffect(() => {
     if (mealKey) setEaten(getEatenMeals().includes(mealKey))
     setFav(isFavorite(meal.name))
   }, [meal.name, mealKey])
 
-  function handleEaten(e: React.MouseEvent) {
+  function handleEatenClick(e: React.MouseEvent) {
     e.stopPropagation()
+    if (!mealKey) return
+    
+    if (eaten) {
+      // If already eaten, just unmark it freely
+      if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(10);
+      const updated = toggleMealEaten(mealKey)
+      setEaten(updated.includes(mealKey))
+      return
+    }
+    
+    // Require checkin to mark as eaten
+    setCheckinOpen(true)
+  }
+
+  function handleVerified() {
+    setCheckinOpen(false)
     if (!mealKey) return
     if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(10);
     const updated = toggleMealEaten(mealKey)
-    setEaten(updated.includes(mealKey))
+    const isNowEaten = updated.includes(mealKey)
+    setEaten(isNowEaten)
+    
+    if (isNowEaten && updated.length === 3) {
+      addMacroScore(10)
+      toast.success(lang === 'zh' ? '🏆 +10 分！三餐全制霸' : '🏆 +10 pts! All meals complete')
+    } else {
+      toast.success(lang === 'zh' ? '✨ 打卡成功' : '✨ Check-in verified')
+    }
   }
 
   function handleFav(e: React.MouseEvent) {
@@ -56,7 +85,8 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card-lg overflow-hidden transition-all duration-300 hover:shadow-md"
+      whileHover={{ y: -4, shadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
+      className="group relative overflow-hidden rounded-[32px] border border-white/20 bg-white/70 backdrop-blur-xl transition-all duration-500 hover:bg-white/80 dark:bg-slate-900/40 dark:border-white/5 shadow-sm"
     >
       {/* Image with overlay */}
       <div className="relative w-full h-52 bg-slate-100 overflow-hidden">
@@ -67,7 +97,13 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
           </div>
         )}
         {meal.imageUrl && (
-          <Image src={meal.imageUrl} alt={meal.name} fill className="object-cover transition-transform duration-700 hover:scale-105" unoptimized />
+          <Image 
+            src={meal.imageUrl} 
+            alt={meal.name} 
+            fill 
+            className="object-cover transition-transform duration-700 hover:scale-105" 
+            priority={priority}
+          />
         )}
         {!meal.imageUrl && !imageLoading && (
           <div className="absolute inset-0 bg-gradient-to-br from-[#E8F5F0] to-[#F0FDF9] flex items-center justify-center">
@@ -127,7 +163,7 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
           {mealKey && (
             <motion.button
               whileTap={{ scale: 0.95 }}
-              onClick={handleEaten}
+              onClick={handleEatenClick}
               className={`flex-1 flex items-center justify-center gap-2 text-xs font-bold py-3 rounded-2xl border transition-all ${
                 eaten
                   ? 'bg-[#0F9E75] text-white border-[#0F9E75] shadow-lg shadow-[#0F9E75]/20'
@@ -149,6 +185,18 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
           >
             <Heart size={18} className={fav ? 'fill-red-500 text-red-500' : ''} />
           </motion.button>
+          {onDislike && (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => {
+                e.stopPropagation()
+                onDislike()
+              }}
+              className="px-3 h-12 rounded-2xl border border-slate-200 bg-white text-xs font-bold text-slate-500 hover:border-amber-400 hover:text-amber-600 transition-all"
+            >
+              {lang === 'zh' ? '不適合我' : 'Not for me'}
+            </motion.button>
+          )}
           {!meal.isTakeout && meal.steps.length > 0 && (
             <motion.button
               whileTap={{ scale: 0.95 }}
@@ -162,9 +210,28 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
         </div>
 
         {hasTakeoutInfo && (
-          <div className="flex items-center gap-2 text-xs font-bold text-amber-700 bg-amber-50/80 backdrop-blur-sm px-4 py-3 rounded-xl border border-amber-100">
-            <ShoppingBag size={14} className="shrink-0" />
-            <span className="truncate">{meal.whereToGet}</span>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-700 bg-amber-50/80 backdrop-blur-sm px-4 py-3 rounded-xl border border-amber-100">
+              <ShoppingBag size={14} className="shrink-0" />
+              <span className="truncate">{meal.whereToGet}</span>
+            </div>
+            
+            <motion.a
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              href={(() => {
+                const dish = meal.whereToGet?.split(' - ')[1] || meal.name
+                const isHK = typeof window !== 'undefined' && (window.navigator.language.includes('HK') || document.documentElement.lang.includes('hk'))
+                const baseUrl = isHK ? 'https://www.foodpanda.hk/search?q=' : 'https://www.ubereats.com/search?q='
+                return baseUrl + encodeURIComponent(dish)
+              })()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 font-black text-sm shadow-lg shadow-amber-400/20 hover:from-amber-500 hover:to-amber-600 transition-all"
+            >
+              <UtensilsCrossed size={16} />
+              {lang === 'zh' ? '立即往外賣平台訂購' : 'Order on Delivery App'}
+            </motion.a>
           </div>
         )}
 
@@ -216,6 +283,19 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
                   </ol>
                 </div>
               )}
+              {coachOpinion && (
+                <div className="mt-6 p-4 rounded-2xl bg-[#0F9E75]/5 dark:bg-[#0F9E75]/10 border border-[#0F9E75]/20 flex gap-3 items-start">
+                  <div className="w-8 h-8 rounded-full bg-[#0F9E75] flex items-center justify-center text-white shrink-0 shadow-lg shadow-[#0F9E75]/20">
+                    <CheckCircle2 size={16} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-[#0F9E75] mb-0.5">Coach's Thought</p>
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed italic">
+                      "{coachOpinion}"
+                    </p>
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -225,6 +305,15 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
         <Suspense fallback={null}>
           <CookMode meal={meal} onClose={() => setCookMode(false)} />
         </Suspense>
+      )}
+      
+      {checkinOpen && (
+        <CheckInCamera
+          checkInType="meal"
+          mealName={meal.name}
+          onVerified={handleVerified}
+          onClose={() => setCheckinOpen(false)}
+        />
       )}
     </motion.div>
   )

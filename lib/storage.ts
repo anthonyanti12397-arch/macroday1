@@ -1,6 +1,6 @@
 'use client'
 
-import type { InBodyRecord, UserProfile, WeeklyPlan, UsageRecord, DailyMeals, GuestSession } from './types'
+import type { InBodyRecord, UserProfile, WeeklyPlan, UsageRecord, DailyMeals, GuestSession, TrainingRecord } from './types'
 
 const KEYS = {
   INBODY_HISTORY: 'fuelweek_inbody_history',
@@ -12,6 +12,7 @@ const KEYS = {
   SESSION: 'macroday_session',
   LANG: 'macroday_lang',
   MEAL_PLAN_CACHE: 'macroday_meal_plan_cache', // New key for hashed cache
+  CLOUD_MIGRATION: 'macroday_cloud_migration_done',
 } as const
 
 // ── InBody ────────────────────────────────────────────────────────────────────
@@ -66,6 +67,15 @@ export function getUserProfile(): UserProfile | null {
   }
 }
 
+export function addDislikedIngredients(ingredients: string[]): UserProfile | null {
+  const profile = getUserProfile()
+  if (!profile) return null
+  const disliked = new Set([...(profile.dislikedIngredients ?? []), ...ingredients.map((i) => i.trim()).filter(Boolean)])
+  const updated = { ...profile, dislikedIngredients: Array.from(disliked) }
+  saveUserProfile(updated)
+  return updated
+}
+
 // ── Weekly Plan ───────────────────────────────────────────────────────────────
 
 export function saveWeeklyPlan(plan: WeeklyPlan): void {
@@ -92,10 +102,10 @@ export function getTodayUsage(): UsageRecord {
   try {
     resetUsageIfNewDay()
     const raw = localStorage.getItem(KEYS.USAGE)
-    if (!raw) return { date: todayStr(), count: 0 }
+    if (!raw) return { date: todayStr(), count: 0, adRewards: 0 }
     return JSON.parse(raw) as UsageRecord
   } catch {
-    return { date: todayStr(), count: 0 }
+    return { date: todayStr(), count: 0, adRewards: 0 }
   }
 }
 
@@ -109,13 +119,23 @@ export function incrementUsage(): void {
   }
 }
 
+export function addAdReward(): void {
+  try {
+    const usage = getTodayUsage()
+    usage.adRewards = (usage.adRewards || 0) + 1
+    localStorage.setItem(KEYS.USAGE, JSON.stringify(usage))
+  } catch {
+    // SSR or storage unavailable
+  }
+}
+
 export function resetUsageIfNewDay(): void {
   try {
     const raw = localStorage.getItem(KEYS.USAGE)
     if (!raw) return
     const usage = JSON.parse(raw) as UsageRecord
     if (usage.date !== todayStr()) {
-      localStorage.setItem(KEYS.USAGE, JSON.stringify({ date: todayStr(), count: 0 }))
+      localStorage.setItem(KEYS.USAGE, JSON.stringify({ date: todayStr(), count: 0, adRewards: 0 }))
     }
   } catch {
     // SSR or storage unavailable
@@ -185,12 +205,22 @@ export function saveToStatsCache(hash: string, data: WeeklyPlan | DailyMeals): v
   try {
     const raw = localStorage.getItem(KEYS.MEAL_PLAN_CACHE)
     const cache = raw ? JSON.parse(raw) : {}
-    cache[hash] = { data, timestamp: Date.now() }
+    const now = Date.now()
+    
+    // GC old entries while saving
+    for (const key of Object.keys(cache)) {
+      if (now - cache[key].timestamp > 3 * 24 * 60 * 60 * 1000) {
+        delete cache[key]
+      }
+    }
+    
+    cache[hash] = { data, timestamp: now }
     localStorage.setItem(KEYS.MEAL_PLAN_CACHE, JSON.stringify(cache))
   } catch {
     // Storage unavailable
   }
 }
+
 
 export function getFromStatsCache<T>(hash: string): T | null {
   try {
@@ -292,6 +322,22 @@ export function getComplianceHistory(days = 30): Record<string, 'full' | 'partia
   return history
 }
 
+export function hasCompletedMigration(): boolean {
+  try {
+    return localStorage.getItem(KEYS.CLOUD_MIGRATION) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function markMigrationComplete(): void {
+  try {
+    localStorage.setItem(KEYS.CLOUD_MIGRATION, '1')
+  } catch {
+    // ignore storage failures
+  }
+}
+
 // ── Favorites ─────────────────────────────────────────────────────────────────
 
 export function getFavorites(): import('./types').Meal[] {
@@ -348,4 +394,173 @@ function todayStr(): string {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
+}
+
+// ── Training ──────────────────────────────────────────────────────────────────
+
+export function getTrainingHistory(): TrainingRecord[] {
+  try {
+    const raw = localStorage.getItem('fuelweek_training_history')
+    if (!raw) return []
+    return JSON.parse(raw) as TrainingRecord[]
+  } catch {
+    return []
+  }
+}
+
+export function saveTrainingRecord(record: TrainingRecord): void {
+  try {
+    const history = getTrainingHistory()
+    const idx = history.findIndex((r) => r.date === record.date)
+    if (idx >= 0) {
+      history[idx] = record
+    } else {
+      history.unshift(record)
+    }
+    // Keep max 90 days
+    if (history.length > 90) history.length = 90
+    localStorage.setItem('fuelweek_training_history', JSON.stringify(history))
+  } catch {
+    // SSR or storage unavailable
+  }
+}
+
+// ── Avatar & MacroScore ───────────────────────────────────────────────────────
+
+export function getMacroScore(): number {
+  try {
+    const raw = localStorage.getItem('macroday_score')
+    if (!raw) return 0
+    return parseInt(raw, 10) || 0
+  } catch {
+    return 0
+  }
+}
+
+export function addMacroScore(points: number): void {
+  try {
+    const current = getMacroScore()
+    localStorage.setItem('macroday_score', (current + points).toString())
+  } catch {
+    // SSR
+  }
+}
+
+export function spendMacroScore(points: number): boolean {
+  try {
+    const current = getMacroScore()
+    if (current < points) return false
+    localStorage.setItem('macroday_score', (current - points).toString())
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function getUnlockedParts(): string[] {
+  try {
+    const raw = localStorage.getItem('macroday_unlocked_parts')
+    if (!raw) return ['head_none', 'top_basic_white', 'bottom_sweats_gray', 'acc_none']
+    return JSON.parse(raw) as string[]
+  } catch {
+    return ['head_none', 'top_basic_white', 'bottom_sweats_gray', 'acc_none']
+  }
+}
+
+export function unlockPart(id: string): void {
+  try {
+    const current = getUnlockedParts()
+    if (!current.includes(id)) {
+      current.push(id)
+      localStorage.setItem('macroday_unlocked_parts', JSON.stringify(current))
+    }
+  } catch {
+    // SSR
+  }
+}
+
+export function getEquippedLoadout(): Record<string, string> {
+  const defaultLoadout = {
+    head: 'head_none',
+    top: 'top_basic_white',
+    bottom: 'bottom_sweats_gray',
+    accessory: 'acc_none'
+  }
+  try {
+    const raw = localStorage.getItem('macroday_equipped_loadout')
+    if (!raw) {
+      // Fallback migrating old `macroday_equipped_outfit`
+      const oldRaw = localStorage.getItem('macroday_equipped_outfit')
+      if (oldRaw === 'gym_black') return { head: 'head_none', top: 'top_tank_black', bottom: 'bottom_shorts_black', accessory: 'acc_none' }
+      if (oldRaw === 'teal_pro') return { head: 'head_none', top: 'top_hoodie_teal', bottom: 'bottom_sweats_gray', accessory: 'acc_none' }
+      if (oldRaw === 'fire_red') return { head: 'head_headband_red', top: 'top_basic_white', bottom: 'bottom_shorts_black', accessory: 'acc_flame' }
+      if (oldRaw === 'galaxy') return { head: 'head_headphones', top: 'top_jacket_galaxy', bottom: 'bottom_pants_galaxy', accessory: 'acc_none' }
+      return defaultLoadout
+    }
+    return JSON.parse(raw)
+  } catch {
+    return defaultLoadout
+  }
+}
+
+export function setEquippedLoadout(loadout: Record<string, string>): void {
+  try {
+    localStorage.setItem('macroday_equipped_loadout', JSON.stringify(loadout))
+  } catch {
+    // SSR
+  }
+}
+
+export function getLastStreakReward(): number {
+  try {
+    const raw = localStorage.getItem('macroday_last_streak_bonus')
+    if (!raw) return 0
+    return parseInt(raw, 10) || 0
+  } catch {
+    return 0
+  }
+}
+
+export function setLastStreakReward(streakCount: number): void {
+  try {
+    localStorage.setItem('macroday_last_streak_bonus', streakCount.toString())
+  } catch {
+    // SSR
+  }
+}
+
+// ── Starter Gear Logic ────────────────────────────────────────────────────────
+
+export function isStarterGearReceived(): boolean {
+  try {
+    return localStorage.getItem('macroday_starter_received') === '1'
+  } catch {
+    return false
+  }
+}
+
+export function checkAndInitStarterGear(gearDb: import('./outfits').GearPart[]): string[] | null {
+  if (isStarterGearReceived()) return null
+
+  try {
+    // Select 2 random items from Common or Rare pools (excluding 'none')
+    const pool = gearDb.filter(p => 
+      (p.rarity === 'common' || p.rarity === 'rare') && 
+      !p.id.endsWith('_none')
+    )
+    
+    // Shuffle and pick 2
+    const shuffled = [...pool].sort(() => 0.5 - Math.random())
+    const starterItems = shuffled.slice(0, 2).map(p => p.id)
+    
+    const current = getUnlockedParts()
+    const updated = Array.from(new Set([...current, ...starterItems]))
+    
+    localStorage.setItem('macroday_unlocked_parts', JSON.stringify(updated))
+    localStorage.setItem('macroday_starter_received', '1')
+    
+    return starterItems
+  } catch {
+    return null
+  }
 }

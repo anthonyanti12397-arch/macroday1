@@ -3,6 +3,8 @@ export const PRO_PRICE_MONTHLY = 5
 export const APP_NAME = 'MacroDay'
 export const APP_NAME_ZH = '每日燃'
 export const GROK_MODEL = 'grok-3-mini'
+export const PROMPT_VERSION = 'v2-regional'
+export const PRO_TRIAL_DAYS = 14
 
-// Beta mode: all users get Pro features unlocked
-export const BETA_MODE = true
+// Phase 4: Pro gating is live.
+export const BETA_MODE = false

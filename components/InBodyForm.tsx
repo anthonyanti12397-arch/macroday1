@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { InBodyRecord, UserProfile } from '@/lib/types'
+import type { InBodyRecord, PreferredCuisine, UserProfile } from '@/lib/types'
 import { saveInBodyRecord, saveUserProfile } from '@/lib/storage'
 import { useLang } from '@/contexts/LangContext'
 import { toast } from 'sonner'
@@ -20,6 +20,19 @@ const GOAL_OPTIONS: { value: UserProfile['goal'] }[] = [
   { value: 'maintain' },
 ]
 
+const FITNESS_LEVEL_OPTIONS: { value: NonNullable<UserProfile['fitnessLevel']> }[] = [
+  { value: 'beginner' },
+  { value: 'active' },
+  { value: 'advanced' },
+]
+
+const FITNESS_LEVEL_ZH: Record<string, string> = {
+  beginner: '新手 (機身/徒手)',
+  active: '定期運動 (含負重)',
+  advanced: '進階老手 (大重量)',
+}
+
+
 const PROTEIN_OPTIONS = ['Chicken', 'Fish', 'Pork', 'Beef', 'Tofu', 'Eggs', 'Seafood', 'Lamb']
 const CARB_OPTIONS = ['Rice', 'Noodles', 'Bread', 'Sweet Potato', 'Oats', 'Pasta']
 const COOKING_STYLE_OPTIONS: { value: UserProfile['cookingStyle'] }[] = [
@@ -34,13 +47,6 @@ const COOKING_STYLE_DESC: Record<UserProfile['cookingStyle'], { en: string; zh: 
   both:    { en: 'Mix of home cook and takeout',          zh: '自煮與外賣混合' },
 }
 
-const CUISINE_OPTIONS = ['HK Café', 'Chinese', 'Japanese', 'Korean', 'Western', 'Southeast Asian', 'Mediterranean', 'Halal']
-
-const CUISINE_ZH: Record<string, string> = {
-  'HK Café': '茶餐廳', Chinese: '中式', Japanese: '日式', Korean: '韓式',
-  Western: '西式', 'Southeast Asian': '東南亞', Mediterranean: '地中海', Halal: '清真',
-}
-
 const PROTEIN_ZH: Record<string, string> = {
   Chicken: '雞肉', Fish: '魚', Pork: '豬肉', Beef: '牛肉',
   Tofu: '豆腐', Eggs: '雞蛋', Seafood: '海鮮', Lamb: '羊肉',
@@ -50,6 +56,14 @@ const CARB_ZH: Record<string, string> = {
   Rice: '白飯', Noodles: '麵', Bread: '麵包',
   'Sweet Potato': '番薯', Oats: '燕麥', Pasta: '意粉',
 }
+
+const PREFERRED_CUISINE_OPTIONS: PreferredCuisine[] = [
+  'Argentine',
+  'Latin American',
+  'Mediterranean',
+  'Asian',
+  'High Protein Classics',
+]
 
 const RESTRICTION_ZH: Record<string, string> = {
   'No dairy': '無乳製品', 'No gluten': '無麩質',
@@ -74,7 +88,9 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
   const [proteinPrefs, setProteinPrefs] = useState<string[]>(latestProfile?.proteinPreferences ?? [])
   const [carbPrefs, setCarbPrefs] = useState<string[]>(latestProfile?.carbPreferences ?? [])
   const [cookingStyle, setCookingStyle] = useState<UserProfile['cookingStyle']>(latestProfile?.cookingStyle ?? 'both')
-  const [cuisinePrefs, setCuisinePrefs] = useState<string[]>(latestProfile?.cuisinePreferences ?? [])
+  const [preferredCuisine, setPreferredCuisine] = useState<PreferredCuisine>(latestProfile?.preferredCuisine ?? 'Argentine')
+  const [fitnessLevel, setFitnessLevel] = useState<NonNullable<UserProfile['fitnessLevel']>>(latestProfile?.fitnessLevel ?? 'beginner')
+
   const [error, setError] = useState('')
 
   const toggle = (arr: string[], val: string, setter: (v: string[]) => void) => {
@@ -131,9 +147,13 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
 
     const profile: UserProfile = {
       goal, dietaryRestrictions: restrictions,
+      fitnessLevel,
       proteinPreferences: proteinPrefs, carbPreferences: carbPrefs,
-      cuisinePreferences: cuisinePrefs,
+      cuisinePreferences: [],
+      preferredCuisine,
+      dislikedIngredients: latestProfile?.dislikedIngredients ?? [],
       cookingStyle, isPro: latestProfile?.isPro ?? false,
+      isAdFree: latestProfile?.isAdFree ?? false,
     }
 
     saveInBodyRecord(record)
@@ -249,21 +269,24 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
 
       {/* Cuisine preferences */}
       <div>
-        <p className="text-sm font-semibold text-zinc-700 mb-1">{i.cuisinePrefs}</p>
-        <p className="text-xs text-zinc-400 mb-2">{i.cuisineOptional}</p>
-        <div className="flex flex-wrap gap-2">
-          {CUISINE_OPTIONS.map((c) => (
-            <button key={c} type="button" onClick={() => toggle(cuisinePrefs, c, setCuisinePrefs)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                cuisinePrefs.includes(c)
-                  ? 'bg-[#7F77DD] text-white border-[#7F77DD]'
-                  : 'bg-white text-zinc-600 border-zinc-300 hover:border-[#7F77DD]'
-              }`}>
-              {lang === 'zh' ? CUISINE_ZH[c] : c}
-            </button>
+        <p className="text-sm font-semibold text-zinc-700 mb-2">Preferred Cuisine</p>
+        <select
+          value={preferredCuisine}
+          onChange={(e) => setPreferredCuisine(e.target.value as PreferredCuisine)}
+          className="w-full h-12 px-4 rounded-2xl bg-white/50 backdrop-blur-sm border border-zinc-200 focus:border-[#0F9E75] focus:ring-0 text-slate-800 font-bold transition-all"
+        >
+          {PREFERRED_CUISINE_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
           ))}
-        </div>
+        </select>
+        <p className="text-xs text-zinc-400 mt-2">
+          {lang === 'zh' ? '讓 AI 更貼近你所在市場與食材文化。' : 'Helps AI localize meals to your market and pantry.'}
+        </p>
       </div>
+
+
 
       {/* Goal */}
       <div>
@@ -277,6 +300,26 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
                   : 'bg-white/50 backdrop-blur-sm text-zinc-700 border-zinc-200 hover:border-[#0F9E75]'
               }`}>
               {t.settings.goalLabels[value]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Fitness Level */}
+      <div>
+        <p className="text-sm font-semibold text-zinc-700 mb-2">{lang === 'zh' ? '運動習慣' : 'Fitness Level'}</p>
+        <div className="flex gap-2 flex-wrap">
+          {FITNESS_LEVEL_OPTIONS.map(({ value }) => (
+            <button key={value} type="button" onClick={() => {
+              if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(5);
+              setFitnessLevel(value);
+            }}
+              className={`px-4 py-2.5 rounded-2xl text-sm font-bold border transition-all active:scale-95 ${
+                fitnessLevel === value
+                  ? 'bg-[#0F9E75] text-white border-[#0F9E75] shadow-lg shadow-[#0F9E75]/20'
+                  : 'bg-white/50 backdrop-blur-sm text-zinc-700 border-zinc-200 hover:border-[#0F9E75]'
+              }`}>
+              {lang === 'zh' ? FITNESS_LEVEL_ZH[value] : value.charAt(0).toUpperCase() + value.slice(1)}
             </button>
           ))}
         </div>

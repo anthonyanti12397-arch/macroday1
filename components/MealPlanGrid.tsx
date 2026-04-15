@@ -79,22 +79,26 @@ export default function MealPlanGrid({ plan, imagesLoading = {} }: MealPlanGridP
               meal={currentDay.breakfast} 
               mealType={t.meal.breakfast} 
               imageLoading={imagesLoading[`week-${dayIdx}-breakfast`]} 
+              coachOpinion={currentDay.coachOpinion}
             />
             <MealCard 
               meal={currentDay.lunch} 
               mealType={t.meal.lunch} 
               imageLoading={imagesLoading[`week-${dayIdx}-lunch`]} 
+              coachOpinion={currentDay.coachOpinion}
             />
             <MealCard 
               meal={currentDay.dinner} 
               mealType={t.meal.dinner} 
               imageLoading={imagesLoading[`week-${dayIdx}-dinner`]} 
+              coachOpinion={currentDay.coachOpinion}
             />
             {currentDay.snack && (
               <MealCard 
                 meal={currentDay.snack} 
                 mealType={t.meal.snack} 
                 imageLoading={imagesLoading[`week-${dayIdx}-snack`]} 
+                coachOpinion={currentDay.coachOpinion}
               />
             )}
           </div>

@@ -8,7 +8,7 @@ interface MacroBarProps {
 export default function MacroBar({ label, target, unit = 'g', color }: MacroBarProps) {
   return (
     <div className="flex items-center justify-between py-0.5">
-      <span className="text-sm font-semibold text-slate-700">{label}</span>
+      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{label}</span>
       <span className="text-sm font-bold" style={{ color }}>
         {target}{unit}
       </span>

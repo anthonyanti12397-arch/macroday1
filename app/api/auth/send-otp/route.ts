@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { generateOTP, signOTPToken } from '@/lib/otp'
+import { generateOTP, normalizeEmail, signOTPToken } from '@/lib/otp'
+
+// Simple in-memory rate limiter (per lambda instance)
+const rateLimitMap = new Map<string, { count: number; timestamp: number }>()
 
 export async function POST(req: NextRequest) {
   const resend = new Resend(process.env.RESEND_API_KEY!)
@@ -11,12 +14,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
     }
 
+    const normalizedEmail = normalizeEmail(email)
+    
+    // Rate Limiting (max 3 per minute)
+    const now = Date.now()
+    const limitRecord = rateLimitMap.get(normalizedEmail)
+    if (limitRecord) {
+      if (now - limitRecord.timestamp < 60000) {
+        if (limitRecord.count >= 3) {
+          return NextResponse.json({ error: 'Too many requests, please try again later' }, { status: 429 })
+        }
+        limitRecord.count += 1
+      } else {
+        rateLimitMap.set(normalizedEmail, { count: 1, timestamp: now })
+      }
+    } else {
+      rateLimitMap.set(normalizedEmail, { count: 1, timestamp: now })
+    }
+
     const otp   = generateOTP()
-    const token = signOTPToken(email, otp)
+    const token = signOTPToken(normalizedEmail, otp)
 
     const { error } = await resend.emails.send({
       from: process.env.EMAIL_FROM ?? 'MacroDay <noreply@macroday.app>',
-      to:   email,
+      to:   normalizedEmail,
       subject: `${otp} — MacroDay 登入驗證碼`,
       html: `<!DOCTYPE html>
 <html>

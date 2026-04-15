@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { getServerSession } from 'next-auth'
 import type { InBodyRecord, UserProfile, WeeklyPlan, Meal } from '@/lib/types'
 import { GROK_MODEL } from '@/lib/constants'
+import { authOptions } from '@/lib/auth'
+import { saveGeneratedWeeklyPlan } from '@/lib/db'
+import { getPromptVersion } from '@/lib/prompts'
+import { GenerateMealsSchema } from '@/lib/validations'
+import { ZodError } from 'zod'
 
 function getClient() {
   return new OpenAI({
@@ -54,14 +60,18 @@ function calcTargets(inbody: InBodyRecord, goal: UserProfile['goal']) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as {
-      inbody: InBodyRecord
-      profile: UserProfile
-      availableIngredients?: string[]
-      lang?: string
+    const session = await getServerSession(authOptions)
+    const rawBody = await req.json()
+    const validation = GenerateMealsSchema.safeParse(rawBody)
+    
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: 'Validation failed', 
+        details: validation.error.flatten().fieldErrors 
+      }, { status: 400 })
     }
 
-    const { inbody, profile, availableIngredients = [], lang = 'zh' } = body
+    const { inbody, profile, availableIngredients = [], lang = 'zh', isTakeoutMode = false, locationContext = '' } = validation.data
     const isChinese = lang === 'zh'
     const { targetCalories, targetProtein } = calcTargets(inbody, profile.goal)
 
@@ -111,19 +121,28 @@ IMAGE PROMPT RULE:
 - Example: "grilled salmon fillet on steamed jasmine rice with bok choy" or "HK-style milk tea with pineapple bun"
 ${namingInstruction}
 
+${isTakeoutMode ? `TAKEOUT MODE ACTIVE (CRITICAL):
+- The user is currently at or near: ${locationContext || 'Unknown Location'}.
+- You MUST use your search capabilities to find REAL restaurants nearby that are available on Foodpanda or UberEats.
+- For EACH meal (except snacks), set "isTakeout": true.
+- Identify a REAL dish name from a REAL restaurant that matches the nutrition targets.
+- Set "whereToGet" to strictly: "[Restaurant Name] - [Dish Name]". This will be used for delivery app searching.
+- Set "cookingTime": 0 and "steps": ["Order via Foodpanda or UberEats"].` : ''}
+
 Return ONLY a JSON object with this exact structure:
 {
   "days": [
     {
       "date": "Monday",
-      "breakfast": { "name": "", "imagePrompt": "", "cookingTime": 0, "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "ingredients": [], "steps": [] },
-      "lunch": { "name": "", "imagePrompt": "", "cookingTime": 0, "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "ingredients": [], "steps": [] },
-      "dinner": { "name": "", "imagePrompt": "", "cookingTime": 0, "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "ingredients": [], "steps": [] },
-      "snack": { "name": "", "imagePrompt": "", "cookingTime": 0, "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "ingredients": [], "steps": [] },
+      "breakfast": { "name": "", "imagePrompt": "", "cookingTime": 0, "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "ingredients": [], "steps": [], "isTakeout": false, "whereToGet": "" },
+      "lunch": { "name": "", "imagePrompt": "", "cookingTime": 0, "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "ingredients": [], "steps": [], "isTakeout": false, "whereToGet": "" },
+      "dinner": { "name": "", "imagePrompt": "", "cookingTime": 0, "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "ingredients": [], "steps": [], "isTakeout": false, "whereToGet": "" },
+      "snack": { "name": "", "imagePrompt": "", "cookingTime": 0, "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "ingredients": [], "steps": [], "isTakeout": false, "whereToGet": "" },
       "totalCalories": 0,
       "totalProtein": 0,
       "totalCarbs": 0,
-      "totalFat": 0
+      "totalFat": 0,
+      "coachOpinion": "1-sentence expert nutritional advice for this specific day in Traditional Chinese"
     }
   ],
   "shoppingList": [
@@ -171,6 +190,11 @@ Return ONLY a JSON object with this exact structure:
       shoppingList: parsed.shoppingList,
       targetCalories,
       targetProtein,
+      promptVersion: getPromptVersion(),
+    }
+
+    if (session?.user?.id) {
+      await saveGeneratedWeeklyPlan(session.user.id, weeklyPlan, profile, getPromptVersion())
     }
 
     return NextResponse.json(weeklyPlan)

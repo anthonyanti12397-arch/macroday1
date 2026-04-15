@@ -12,6 +12,11 @@
     --pro: #7F77DD;
     --card-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 20px rgba(0,0,0,0.06);
     --card-shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 4px 10px rgba(0,0,0,0.05);
+    
+    /* Glassmorphism Tokens */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-highlight: rgba(255, 255, 255, 0.6);
     /* Light mode surface tokens */
     --bg-page: #F8FAFC;
     --bg-card: #FFFFFF;
@@ -31,6 +36,11 @@
     --bg-input: #273349;
     --card-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 8px 20px rgba(0,0,0,0.3);
     --card-shadow-sm: 0 1px 3px rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.2);
+    
+    /* Glassmorphism Dark Tokens */
+    --glass-bg: rgba(15, 23, 42, 0.4);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-highlight: rgba(255, 255, 255, 0.05);
   }
 
   /* Dark skeleton shimmer */
@@ -96,7 +106,7 @@
   }
 
   .btn-secondary {
-    @apply flex items-center justify-center gap-2 font-semibold py-3.5 rounded-2xl transition-all active:scale-[0.98] text-sm bg-slate-100 text-slate-700 hover:bg-slate-200;
+    @apply flex items-center justify-center gap-2 font-semibold py-3.5 rounded-2xl transition-all active:scale-[0.98] text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600;
   }
 
   .input-field {
@@ -114,11 +124,13 @@
   }
 
   .section-label {
-    @apply text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3;
+    @apply text-[11px] font-bold uppercase tracking-widest mb-3;
+    color: var(--text-secondary);
   }
 
   .page-header {
-    @apply text-2xl font-bold text-slate-900 tracking-tight;
+    @apply text-2xl font-bold tracking-tight;
+    color: var(--text-primary);
   }
 
   .tag-teal {
@@ -148,6 +160,22 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+  }
+  
+  .glass-premium {
+    background: linear-gradient(135deg, var(--glass-bg), var(--glass-highlight));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
   }
 }
 

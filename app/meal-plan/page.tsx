@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { RefreshCw, UtensilsCrossed, Heart, Clock } from 'lucide-react'
+import { RefreshCw, UtensilsCrossed, Heart, Clock, MapPin, ShoppingBag, Share2 } from 'lucide-react'
 import Image from 'next/image'
 import {
   getLatestInBody, getUserProfile,
@@ -10,20 +11,25 @@ import {
   saveDailyMeals, getTodayDailyMeals, updateMealImage,
   incrementUsage, getTodayUsage,
   saveToStatsCache, getFromStatsCache,
-  getFavorites,
+  getFavorites, addDislikedIngredients,
 } from '@/lib/storage'
 import { generateStatsHash, getMemoryCache, setMemoryCache } from '@/lib/cache'
 import type { InBodyRecord, UserProfile, WeeklyPlan, DailyMeals, Meal } from '@/lib/types'
+import { PROMPT_VERSION } from '@/lib/constants'
+import { useLang } from '@/contexts/LangContext'
+import { toast } from 'sonner'
 import MealPlanGrid from '@/components/MealPlanGrid'
 import MealCard from '@/components/MealCard'
-import ConfettiCelebration from '@/components/ConfettiCelebration'
-import UpgradePrompt from '@/components/UpgradePrompt'
-import UsageCounter from '@/components/UsageCounter'
-import { useLang } from '@/contexts/LangContext'
-import { FREE_DAILY_LIMIT, BETA_MODE } from '@/lib/constants'
-import { toast } from 'sonner'
 import { MealCardSkeleton } from '@/components/Skeleton'
-import ExportPDFButton from '@/components/ExportPDFButton'
+import ShareableCard from '@/components/ShareableCard'
+
+const ConfettiCelebration = dynamic(() => import('@/components/ConfettiCelebration'))
+const UpgradePrompt = dynamic(() => import('@/components/UpgradePrompt'))
+const ExportPDFButton = dynamic(() => import('@/components/ExportPDFButton'), { ssr: false })
+const ShareButton = dynamic(() => import('@/components/ShareButton'), { ssr: false })
+const UsageCounter = dynamic(() => import('@/components/UsageCounter'))
+import { canGenerateDaily, canUseFeature, isProUser } from '@/lib/featureGate'
+import { getCurrentLocation, getAddressFromCoords } from '@/lib/location'
 
 async function fetchImage(mealName: string, imagePrompt?: string): Promise<string | null> {
   try {
@@ -63,50 +69,68 @@ export default function MealPlanPage() {
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
   const [swapping, setSwapping] = useState<Record<string, boolean>>({})
+  const [isTakeoutMode, setIsTakeoutMode] = useState(false)
+  const [locationContext, setLocationContext] = useState('')
+  const [fetchingLocation, setFetchingLocation] = useState(false)
 
   const generateImages = useCallback(async (meals: DailyMeals) => {
     const mealTypes = ['breakfast', 'lunch', 'dinner'] as const
-    for (const type of mealTypes) {
-      const meal = meals[type]
-      if (meal.imageUrl) continue
-      setImagesLoading((prev) => ({ ...prev, [type]: true }))
-      const url = await fetchImage(meal.name, meal.imagePrompt)
-      if (url) {
-        updateMealImage(type, url) // This only updates Daily in storage...
-        setDailyMeals((prev) => {
-          if (!prev) return prev
-          return { ...prev, [type]: { ...prev[type], imageUrl: url } }
-        })
-      }
-      setImagesLoading((prev) => ({ ...prev, [type]: false }))
-    }
+    
+    await Promise.all(
+      mealTypes.map(async (type) => {
+        const meal = meals[type]
+        if (meal.imageUrl) return
+
+        setImagesLoading((prev) => ({ ...prev, [type]: true }))
+        try {
+          const url = await fetchImage(meal.name, meal.imagePrompt)
+          if (url) {
+            updateMealImage(type, url)
+            setDailyMeals((prev) => {
+              if (!prev) return prev
+              return { ...prev, [type]: { ...prev[type], imageUrl: url } }
+            })
+          }
+        } finally {
+          setImagesLoading((prev) => ({ ...prev, [type]: false }))
+        }
+      })
+    )
   }, [])
 
   const generateWeekImages = useCallback(async (weekPlan: WeeklyPlan) => {
-    // Generate images for each day of the week
-    for (let dayIdx = 0; dayIdx < weekPlan.days.length; dayIdx++) {
-      const day = weekPlan.days[dayIdx]
+    const tasks: Promise<void>[] = []
+    
+    weekPlan.days.forEach((day, dayIdx) => {
       const types = ['breakfast', 'lunch', 'dinner', 'snack'] as const
-      for (const type of types) {
+      types.forEach((type) => {
         const meal = day[type]
-        if (!meal || meal.imageUrl) continue
+        if (!meal || meal.imageUrl) return
         
         const loadingKey = `week-${dayIdx}-${type}`
-        setImagesLoading((prev) => ({ ...prev, [loadingKey]: true }))
         
-        const url = await fetchImage(meal.name, meal.imagePrompt)
-        if (url) {
-          setPlan((prev) => {
-            if (!prev) return prev
-            const newDays = [...prev.days]
-            newDays[dayIdx] = { ...newDays[dayIdx], [type]: { ...newDays[dayIdx][type]!, imageUrl: url } }
-            // Note: We should ideally update storage too, but plan is already saved
-            return { ...prev, days: newDays }
-          })
-        }
-        setImagesLoading((prev) => ({ ...prev, [loadingKey]: false }))
-      }
-    }
+        const task = (async () => {
+          setImagesLoading((prev) => ({ ...prev, [loadingKey]: true }))
+          try {
+            const url = await fetchImage(meal.name, meal.imagePrompt)
+            if (url) {
+              setPlan((prev) => {
+                if (!prev) return prev
+                const newDays = [...prev.days]
+                newDays[dayIdx] = { ...newDays[dayIdx], [type]: { ...newDays[dayIdx][type]!, imageUrl: url } }
+                return { ...prev, days: newDays }
+              })
+            }
+          } finally {
+            setImagesLoading((prev) => ({ ...prev, [loadingKey]: false }))
+          }
+        })()
+        
+        tasks.push(task)
+      })
+    })
+
+    await Promise.all(tasks)
   }, [])
 
   async function swapMeal(mealType: 'breakfast' | 'lunch' | 'dinner') {
@@ -124,6 +148,8 @@ export default function MealPlanPage() {
           mealType,
           currentMealName: dailyMeals[mealType].name,
           lang,
+          isTakeoutMode,
+          locationContext
         }),
       })
       const newMeal = await res.json() as import('@/lib/types').Meal
@@ -139,6 +165,28 @@ export default function MealPlanPage() {
       toast.error(lang === 'zh' ? '換餐失敗，請重試' : 'Swap failed, please try again')
     } finally {
       setSwapping((prev) => ({ ...prev, [mealType]: false }))
+    }
+  }
+
+  async function handleDislike(mealType: 'breakfast' | 'lunch' | 'dinner') {
+    if (!dailyMeals) return
+    const meal = dailyMeals[mealType]
+    const nextProfile = addDislikedIngredients(meal.ingredients.slice(0, 3))
+    if (nextProfile) setProfile(nextProfile)
+    toast.success(lang === 'zh' ? '已記錄偏好，之後會避開這些食材' : 'Preference saved. Future plans will avoid these ingredients.')
+    try {
+      await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mealType,
+          reason: 'not_for_me',
+          dislikedIngredients: meal.ingredients.slice(0, 3),
+          promptVersion: dailyMeals.promptVersion ?? PROMPT_VERSION,
+        }),
+      })
+    } catch {
+      // Keep the local preference even if cloud feedback fails.
     }
   }
 
@@ -158,23 +206,38 @@ export default function MealPlanPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  async function handleTakeoutToggle(checked: boolean) {
+    if (checked) {
+      setFetchingLocation(true)
+      const loc = await getCurrentLocation()
+      if (loc) {
+        const addr = await getAddressFromCoords(loc.latitude, loc.longitude)
+        setLocationContext(addr)
+        setIsTakeoutMode(true)
+        toast.success(lang === 'zh' ? `已定位：${addr}` : `Located: ${addr}`)
+      } else {
+        toast.error(lang === 'zh' ? '無法獲取位置，請手動確認權限' : 'Failed to get location, please check permissions')
+      }
+      setFetchingLocation(false)
+    } else {
+      setIsTakeoutMode(false)
+    }
+  }
+
   async function generateToday(force = false) {
     const currentProfile = getUserProfile()
     const currentInbody = getLatestInBody()
     if (!currentInbody || !currentProfile) return
 
-    if (!currentProfile.isPro && !BETA_MODE) {
-      const usage = getTodayUsage()
-      if (usage.count >= FREE_DAILY_LIMIT) {
-        setShowUpgrade(true)
-        return
-      }
+    if (!canGenerateDaily({ isPro: currentProfile.isPro, dailyUsageCount: getTodayUsage().count })) {
+      setShowUpgrade(true)
+      return
     }
 
     const cacheHash = generateStatsHash(currentInbody, currentProfile, lang)
     
     // 1. Check memory cache (fastest)
-    const mem = getMemoryCache(cacheHash + '_daily')
+    const mem = getMemoryCache<DailyMeals>(cacheHash + '_daily')
     if (mem && !force) {
       setDailyMeals(mem)
       generateImages(mem)
@@ -207,7 +270,13 @@ export default function MealPlanPage() {
     const promise = fetch('/api/generate-daily', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ inbody: currentInbody, profile: currentProfile, lang }),
+      body: JSON.stringify({ 
+        inbody: currentInbody, 
+        profile: currentProfile, 
+        lang,
+        isTakeoutMode,
+        locationContext
+      }),
     }).then(async res => {
       const data = await res.json() as DailyMeals | { error: string }
       if ('error' in data) throw new Error(data.error)
@@ -240,12 +309,12 @@ export default function MealPlanPage() {
   async function generateWeek() {
     const currentProfile = getUserProfile()
     if (!inbody || !currentProfile) return
-    if (!currentProfile.isPro && !BETA_MODE) { setShowUpgrade(true); return }
+    if (!canUseFeature('weekly-plan', { isPro: currentProfile.isPro })) { setShowUpgrade(true); return }
 
     const cacheHash = generateStatsHash(inbody, currentProfile, lang)
     
     // Check cache first
-    const mem = getMemoryCache(cacheHash + '_weekly')
+    const mem = getMemoryCache<WeeklyPlan>(cacheHash + '_weekly')
     if (mem) { setPlan(mem); return }
     
     const statsCached = getFromStatsCache<WeeklyPlan>(cacheHash + '_weekly')
@@ -261,7 +330,13 @@ export default function MealPlanPage() {
     const promise = fetch('/api/generate-meals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ inbody, profile: currentProfile, lang }),
+      body: JSON.stringify({ 
+        inbody, 
+        profile: currentProfile, 
+        lang,
+        isTakeoutMode,
+        locationContext
+      }),
     }).then(async res => {
       const data = await res.json() as WeeklyPlan | { error: string }
       if ('error' in data) throw new Error(data.error)
@@ -312,6 +387,13 @@ export default function MealPlanPage() {
 
   return (
     <div className="py-6 space-y-5">
+      {/* Hidden Shareable Card */}
+      <div className="hidden">
+        <div id="shareable-card-target">
+          <ShareableCard inbody={inbody} profile={profile} />
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -341,8 +423,38 @@ export default function MealPlanPage() {
         )}
       </div>
 
+      {/* Takeout Toggle */}
+      {showGenerateBtn && (
+        <div className="flex items-center justify-between p-4 glass rounded-[24px] border-white/20 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${isTakeoutMode ? 'bg-[#0F9E75] text-white shadow-lg shadow-[#0F9E75]/20' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+              <MapPin size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-black text-slate-800 dark:text-slate-200">
+                {lang === 'zh' ? '外賣模式' : 'Takeout Mode'}
+              </p>
+              <p className="text-[10px] text-slate-500 font-bold tracking-tight truncate">
+                {isTakeoutMode 
+                  ? (locationContext || (lang === 'zh' ? '正在獲取位置...' : 'Detecting location...')) 
+                  : (lang === 'zh' ? '自動搜索附近餐廳餐單' : 'Auto-search nearby restaurant menus')}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => handleTakeoutToggle(!isTakeoutMode)}
+            disabled={fetchingLocation}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none ${isTakeoutMode ? 'bg-[#0F9E75]' : 'bg-slate-300 dark:bg-slate-700'}`}
+          >
+            <span
+              className={`${isTakeoutMode ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform`}
+            />
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-2xl">
+      <div className="flex gap-1 p-1.5 glass rounded-[20px] border-white/10">
         {([
           { key: 'today', label: mp.tabToday },
           { key: 'week', label: mp.tabWeek },
@@ -351,10 +463,10 @@ export default function MealPlanPage() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all ${
+            className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${
               tab === key
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-400 hover:text-slate-600'
+                ? 'bg-[#0F9E75] text-white shadow-lg shadow-[#0F9E75]/20'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
             }`}
           >
             {label}
@@ -369,7 +481,7 @@ export default function MealPlanPage() {
             <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-2xl px-4 py-3">{errorToday}</div>
           )}
 
-          {!profile?.isPro && !BETA_MODE && <UsageCounter key={usageKey} />}
+          {!isProUser(profile?.isPro) && <UsageCounter key={usageKey} />}
 
           {/* Skeleton */}
           {loadingToday && (
@@ -385,6 +497,7 @@ export default function MealPlanPage() {
               <div className="flex items-center justify-between">
                 <h2 className="font-bold text-lg text-slate-900 tracking-tight">{t.dashboard.todayMeals}</h2>
                 <div className="flex items-center gap-2">
+                  <ShareButton targetId="shareable-card-target" fileName={`MacroDay-Progress-${new Date().toISOString().split('T')[0]}`} />
                   <ExportPDFButton targetId="daily-meals-content" fileName={`MacroDay-Today-${(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()}`} />
                   <button
                     onClick={() => generateToday(true)}
@@ -396,7 +509,7 @@ export default function MealPlanPage() {
               </div>
 
               <div id="daily-meals-content" className="space-y-4 -mx-1 px-1 py-1">
-                {(['breakfast', 'lunch', 'dinner'] as const).map((type) => {
+                {(['breakfast', 'lunch', 'dinner'] as const).map((type, index) => {
                 const meal: Meal = { ...dailyMeals[type] }
                 const mealTypeLabel = t.meal[type]
                 return (
@@ -407,7 +520,10 @@ export default function MealPlanPage() {
                     imageLoading={imagesLoading[type] ?? false}
                     mealKey={type}
                     onSwap={() => swapMeal(type)}
+                    onDislike={() => handleDislike(type)}
                     swapping={swapping[type] ?? false}
+                    priority={index === 0}
+                    coachOpinion={dailyMeals.coachOpinion}
                   />
                 )
               })}
@@ -488,7 +604,7 @@ export default function MealPlanPage() {
             <div className="card p-8 text-center space-y-2">
               <p className="font-semibold text-slate-700">{mp.noData}</p>
               <p className="text-slate-400 text-sm">
-                {profile && !profile.isPro && !BETA_MODE ? mp.proRequired : mp.noDataDesc}
+                {profile && !isProUser(profile.isPro) ? mp.proRequired : mp.noDataDesc}
               </p>
             </div>
           )}

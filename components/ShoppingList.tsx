@@ -59,7 +59,7 @@ export default function ShoppingList({ items }: ShoppingListProps) {
     })
   }
 
-  const checkedCount = Object.values(checked).filter(Boolean).length
+  const checkedCount = items.filter(item => checked[`${item.name}-${item.amount}`]).length
   const totalCount = items.length
 
   const grouped = CATEGORY_ORDER.map((cat) => ({

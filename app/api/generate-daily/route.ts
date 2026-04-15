@@ -1,153 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
-import type { InBodyRecord, UserProfile, DailyMeals, Meal } from '@/lib/types'
-import { GROK_MODEL } from '@/lib/constants'
-import { findPoolMatch } from '@/lib/recipe-pool'
-
-function getClient() {
-  return new OpenAI({
-    apiKey: process.env.XAI_API_KEY ?? 'placeholder',
-    baseURL: 'https://api.x.ai/v1',
-  })
-}
-
-function estimateBMR(r: InBodyRecord): number {
-  if (r.bmr) return r.bmr
-  const base = 10 * r.weight + 6.25 * r.height - 5 * r.age
-  return Math.round(r.gender === 'male' ? base + 5 : base - 161)
-}
-
-function calcTargets(inbody: InBodyRecord, goal: UserProfile['goal']) {
-  const bmr = estimateBMR(inbody)
-  const muscle = inbody.skeletalMuscleMass
-  let targetCalories: number, targetProtein: number
-  switch (goal) {
-    case 'fat_loss':
-      targetCalories = Math.round(bmr * 0.85)
-      targetProtein = muscle ? Math.round(muscle * 2.2) : Math.round(inbody.weight * 1.8)
-      break
-    case 'muscle_gain':
-      targetCalories = Math.round(bmr * 1.15)
-      targetProtein = muscle ? Math.round(muscle * 2.5) : Math.round(inbody.weight * 2.0)
-      break
-    default:
-      targetCalories = Math.round(bmr * 1.0)
-      targetProtein = muscle ? Math.round(muscle * 2.0) : Math.round(inbody.weight * 1.6)
-  }
-  return { targetCalories, targetProtein }
-}
-
-/** Build a descriptive English image prompt from meal data if the AI left it empty */
-function ensureImagePrompt(meal: Meal): Meal {
-  if (meal.imagePrompt?.trim()) return meal
-  // Derive English description from ingredients (first 3) + meal name translation hint
-  const ingEn = meal.ingredients
-    .slice(0, 3)
-    .map(i => i.replace(/[^\w\s(),]/g, ' ').trim())
-    .filter(Boolean)
-    .join(', ')
-  meal.imagePrompt = `${meal.name}${ingEn ? ` made with ${ingEn}` : ''}, Asian food photography`
-  return meal
-}
-
-function fixMacros(meal: Meal): Meal {
-  const calculated = Math.round(meal.protein * 4 + meal.carbs * 4 + meal.fat * 9)
-  return { ...meal, calories: calculated }
-}
+import { getServerSession } from 'next-auth'
+import type { InBodyRecord, UserProfile } from '@/lib/types'
+import { authOptions } from '@/lib/auth'
+import { saveGeneratedDailyPlan } from '@/lib/db'
+import { generateDailyMealsInner } from '@/lib/ai-service'
+import { GenerateDailySchema } from '@/lib/validations'
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as { inbody: InBodyRecord; profile: UserProfile; lang?: string }
-    const { inbody, profile, lang = 'zh' } = body
-    const isChinese = lang === 'zh'
-    const { targetCalories, targetProtein } = calcTargets(inbody, profile.goal)
-
-    // 1. FAST PATH: Check Static Pool for instant results
-    const poolMatch = findPoolMatch(targetCalories, targetProtein)
-    if (poolMatch) {
-      console.log('⚡ Pool Match Found! Returning instant result.')
-      return NextResponse.json({ ...poolMatch, date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })() })
-    }
-
-    const restrictions = profile.dietaryRestrictions.length > 0
-      ? profile.dietaryRestrictions.join(', ') : 'None'
-    const proteins = profile.proteinPreferences.length > 0
-      ? profile.proteinPreferences.join(', ') : 'any'
-    const carbs = profile.carbPreferences.length > 0
-      ? profile.carbPreferences.join(', ') : 'any'
-    const cuisines = (profile.cuisinePreferences ?? []).length > 0
-      ? profile.cuisinePreferences.join(', ') : 'any'
-
-    const cookingStyleMap = {
-      home: isChinese
-        ? '用戶自己在家煮食。提供完整繁體中文食譜。'
-        : 'User cooks at home. Provide full recipes in English.',
-      takeout: isChinese
-        ? '用戶常吃外賣。推薦香港本地常見餐廳菜式（如：茶餐廳、麥當勞、吉野家等）。isTakeout: true。'
-        : 'User eats takeout. Recommend real-world restaurant dishes. isTakeout: true.',
-      both: isChinese
-        ? '混合：早餐在家，午餐外賣（香港特色），晚餐在家。'
-        : 'Mix: Breakfast/Dinner at home, Lunch is takeout.',
-    }
-    const cookingInstruction = cookingStyleMap[profile.cookingStyle]
-
-    const namingInstruction = isChinese
-      ? '- 所有內容使用繁體中文\n- whereToGet 填寫具體類型（如「港式茶餐廳」、「健康沙拉店」）'
-      : '- Use English for all content\n- be specific about dish names'
-
-    const userPrompt = `Generate today's 3 meals (breakfast, lunch, dinner) for a gym user.
+    const rawBody = await req.json()
+    const validation = GenerateDailySchema.safeParse(rawBody)
     
-    Goal: ${profile.goal}
-    Targets: ${targetCalories} kcal | ${targetProtein}g Protein.
-    Preferences: ${proteins} proteins, ${carbs} carbs.
-    Style: ${cookingInstruction}
-    
-    DIVERSITY & ACCURACY:
-    - No duplicate main ingredients in one day.
-    - Reference: 100g Chicken = 31g P, 100g Rice = 28g C.
-    - If user is ZH/HK, focus on local dishes (Steamed Fish, Dim Sum options, etc).
-
-    Return ONLY a JSON object:
-    {
-      "breakfast": { "name": "", "imagePrompt": "", "cookingTime": 0, "protein": 0, "carbs": 0, "fat": 0, "ingredients": [], "steps": [], "isTakeout": false, "whereToGet": "" },
-      "lunch": { ... },
-      "dinner": { ... }
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: 'Validation failed', 
+        details: validation.error.flatten().fieldErrors 
+      }, { status: 400 })
     }
-    ${namingInstruction}`
 
-    const client = getClient()
-    const completion = await client.chat.completions.create({
-      model: GROK_MODEL,
-      max_tokens: 1800,
-      temperature: 0.7,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a sports nutritionist. Generate precise meal recommendations in JSON. No markdown.',
-        },
-        { role: 'user', content: userPrompt },
-      ],
+    const { inbody, profile, lang = 'zh', hasTraining, estimatedCaloriesBurned, isTakeoutMode = false, locationContext = '' } = validation.data
+    const session = await getServerSession(authOptions)
+
+    const result = await generateDailyMealsInner({
+      inbody,
+      profile,
+      lang,
+      hasTraining,
+      estimatedCaloriesBurned,
+      isTakeoutMode,
+      locationContext
     })
 
-    const rawText = completion.choices[0]?.message?.content ?? ''
-    const cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
-    const parsed = JSON.parse(cleaned) as {
-      breakfast: Meal
-      lunch: Meal
-      dinner: Meal
-    }
-
-    const result: DailyMeals = {
-      date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })(),
-      breakfast: fixMacros(ensureImagePrompt(parsed.breakfast)),
-      lunch: fixMacros(ensureImagePrompt(parsed.lunch)),
-      dinner: fixMacros(ensureImagePrompt(parsed.dinner)),
-      targetCalories,
-      targetProtein,
+    if (session?.user?.id) {
+      await saveGeneratedDailyPlan(session.user.id, result, profile, result.promptVersion ?? 'v2-regional')
     }
 
     return NextResponse.json(result)
   } catch (err) {
+    console.error('[API/Generate-Daily] Error:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }

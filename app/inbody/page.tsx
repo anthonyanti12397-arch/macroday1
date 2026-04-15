@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getInBodyHistory, getLatestInBody, getUserProfile } from '@/lib/storage'
+import { getInBodyHistory, getLatestInBody, getUserProfile, addMacroScore } from '@/lib/storage'
 import type { InBodyRecord, UserProfile } from '@/lib/types'
 import InBodyForm from '@/components/InBodyForm'
 import InBodyChartModal from '@/components/InBodyChartModal'
@@ -9,9 +9,10 @@ import UpgradePrompt from '@/components/UpgradePrompt'
 import { useLang } from '@/contexts/LangContext'
 import { Activity, CheckCircle, TrendingUp, Lock } from 'lucide-react'
 import ComparisonCard from '@/components/ComparisonCard'
+import { toast } from 'sonner'
 
 export default function InBodyPage() {
-  const { t } = useLang()
+  const { lang, t } = useLang()
   const i = t.inbody
   const [history, setHistory] = useState<InBodyRecord[]>([])
   const [latest, setLatest] = useState<InBodyRecord | null>(null)
@@ -32,6 +33,8 @@ export default function InBodyPage() {
     load()
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
+    addMacroScore(20)
+    toast.success(lang === 'zh' ? '🏆 +20 分！記錄了新的資料' : '🏆 +20 pts! New data added')
   }
 
   return (
@@ -50,7 +53,7 @@ export default function InBodyPage() {
       {/* Form card */}
       <div className="card-lg p-5">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-bold text-slate-800">
+          <h2 className="font-bold text-slate-800 dark:text-slate-200">
             {latest ? i.updateData : i.addData}
           </h2>
           {saved && (
@@ -77,7 +80,7 @@ export default function InBodyPage() {
             <TrendingUp size={18} className="text-[#7F77DD]" />
           </div>
           <div className="flex-1">
-            <p className="font-bold text-slate-800 text-sm">{i.viewCharts}</p>
+            <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">{i.viewCharts}</p>
             <p className="text-xs text-slate-400">{i.chartsDesc}</p>
           </div>
           {!profile?.isPro && (
@@ -140,7 +143,7 @@ function HistStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{label}</p>
-      <p className="text-sm font-bold text-slate-700">{value}</p>
+      <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{value}</p>
     </div>
   )
 }

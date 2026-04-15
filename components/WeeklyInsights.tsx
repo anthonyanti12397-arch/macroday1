@@ -64,13 +64,13 @@ export default function WeeklyInsights() {
     <div className="card-lg p-5">
       <div className="flex items-center gap-2 mb-4">
         <BarChart2 size={14} className="text-[#0F9E75]" />
-        <p className="text-xs font-black uppercase tracking-wider text-slate-500">
+        <p className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
           {lang === 'zh' ? '本週洞察' : 'Weekly Insights'}
         </p>
       </div>
       <div className="grid grid-cols-3 gap-3">
         {stats.map(({ value, label, color }) => (
-          <div key={label} className="text-center bg-slate-50 rounded-2xl p-3">
+          <div key={label} className="text-center bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-3">
             <p className="text-2xl font-black leading-none mb-1" style={{ color }}>{value}</p>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">{label}</p>
           </div>

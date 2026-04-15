@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle, Sparkles, ChevronRight, TrendingUp } from 'lucide-react'
+import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle, Activity, TrendingUp } from 'lucide-react'
 import Logo from '@/components/Logo'
+import Avatar from '@/components/Avatar'
 import SettingsSheet from '@/components/SettingsSheet'
 import { useLang } from '@/contexts/LangContext'
-import { getLatestInBody, getUserProfile, getTodayDailyMeals, getGuestSession, getFromStatsCache } from '@/lib/storage'
+import { getLatestInBody, getUserProfile, getTodayDailyMeals, getGuestSession, getFromStatsCache, getInBodyHistory, getTrainingHistory, getEquippedLoadout, getMacroScore } from '@/lib/storage'
 import { generateStatsHash, setMemoryCache } from '@/lib/cache'
-import type { InBodyRecord, UserProfile, DailyMeals } from '@/lib/types'
+import type { InBodyRecord, UserProfile, DailyMeals, TrainingRecord } from '@/lib/types'
 import MacroBar from '@/components/MacroBar'
 import UpgradePrompt from '@/components/UpgradePrompt'
 import { useSession } from 'next-auth/react'
@@ -22,7 +23,7 @@ import PushPermissionBanner from '@/components/PushPermissionBanner'
 import NutritionTrend from '@/components/NutritionTrend'
 import WeeklyInsights from '@/components/WeeklyInsights'
 import WeightSparkline from '@/components/WeightSparkline'
-
+import AdBanner from '@/components/AdBanner'
 function estimateBMR(r: InBodyRecord): number {
   if (r.bmr) return r.bmr
   const base = 10 * r.weight + 6.25 * r.height - 5 * r.age
@@ -61,13 +62,28 @@ export default function DashboardPage() {
   const [todayMeals, setTodayMeals] = useState<DailyMeals | null>(null)
   const [isGuest, setIsGuest] = useState(false)
   const [guestWarningDismissed, setGuestWarningDismissed] = useState(false)
-
+  const [inbodyHistoryLength, setInbodyHistoryLength] = useState(0)
+  const [todayTraining, setTodayTraining] = useState<TrainingRecord | null>(null)
+  const [equippedLoadout, setEquippedLoadout] = useState<Record<string, string>>({})
+  const [macroScore, setMacroScore] = useState(0)
+  
   useEffect(() => {
     const currentInbody = getLatestInBody()
     const currentProfile = getUserProfile()
     setInbody(currentInbody)
     setProfile(currentProfile)
     setIsGuest(!!getGuestSession())
+    setEquippedLoadout(getEquippedLoadout())
+    setMacroScore(getMacroScore())
+    
+    const history = getInBodyHistory()
+    setInbodyHistoryLength(history.length)
+    
+    const th = getTrainingHistory()
+    const d = new Date()
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const todayT = th.find(t => t.date === todayStr)
+    if (todayT) setTodayTraining(todayT)
 
     if (currentInbody && currentProfile) {
       const cacheHash = generateStatsHash(currentInbody, currentProfile, lang)
@@ -94,11 +110,24 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <StreakBadge />
+          
+          <Link href="/avatar" className="relative">
+            <div className="w-10 h-10 rounded-2xl bg-[#E8F5F0] dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center hover:border-[#0F9E75] transition-colors"
+              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+              <Avatar loadout={equippedLoadout} size="sm" />
+            </div>
+            {macroScore > 0 && (
+              <span className="absolute -top-1 -right-1 bg-[#F59E0B] text-white text-[9px] font-black rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                {macroScore}
+              </span>
+            )}
+          </Link>
+
           <button
             onClick={() => setShowSettings(true)}
-            className="p-2.5 rounded-2xl bg-white border border-slate-200 hover:border-[#0F9E75] transition-colors"
+            className="p-2.5 rounded-2xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-[#0F9E75] transition-colors"
             style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-            <Settings size={18} className="text-slate-500" />
+            <Settings size={18} className="text-slate-500 dark:text-slate-400" />
           </button>
         </div>
       </div>
@@ -118,19 +147,27 @@ export default function DashboardPage() {
 
       {/* Guest data warning */}
       {isGuest && status !== 'authenticated' && !guestWarningDismissed && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3">
-          <ShieldAlert size={16} className="text-amber-500 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/40 dark:border-slate-700/40 rounded-2xl px-5 py-4 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-amber-400/50" />
+          <ShieldAlert size={18} className="text-amber-500 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-amber-700 mb-0.5">
-              {lang === 'zh' ? '訪客模式：數據僅存於此裝置' : 'Guest mode: data stored on this device only'}
+            <p className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight mb-0.5">
+              {lang === 'zh' ? '訪客模式' : 'Guest Mode'}
             </p>
-            <p className="text-[11px] text-amber-600">
-              {lang === 'zh' ? '登入帳號以在所有裝置同步並保護你的數據' : 'Sign in to sync and protect your data across devices'}
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+              {lang === 'zh' ? '數據僅存於此裝置。登入以同步並保護數據。' : 'Data is local only. Sign in to sync and protect your progress.'}
             </p>
           </div>
-          <button onClick={() => setGuestWarningDismissed(true)} className="text-amber-400 hover:text-amber-600 text-sm shrink-0 font-bold">×</button>
+          <button 
+            onClick={() => setGuestWarningDismissed(true)} 
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1"
+          >
+            <span className="text-lg leading-none">&times;</span>
+          </button>
         </div>
       )}
+
+
 
       {/* No InBody data */}
       {!inbody && (
@@ -139,8 +176,8 @@ export default function DashboardPage() {
             <Zap size={28} className="text-[#0F9E75]" />
           </div>
           <div>
-            <p className="font-bold text-slate-800 text-lg mb-1">{t.dashboard.noDataTitle}</p>
-            <p className="text-slate-500 text-sm">{t.dashboard.noDataDesc}</p>
+            <p className="font-bold text-slate-800 dark:text-slate-200 text-lg mb-1">{t.dashboard.noDataTitle}</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">{t.dashboard.noDataDesc}</p>
           </div>
           <Link href="/inbody" className="btn-primary inline-flex px-8">
             {t.btn.getStarted}
@@ -194,13 +231,47 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Support Developer */}
-          <DonationBox />
+          {/* Today's Training Card */}
+          <Link href="/training" className="block">
+            {todayTraining ? (
+              <div className="card-lg p-4 flex items-center gap-4 hover:border-[#0F9E75] transition-colors">
+                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${todayTraining.completed ? 'bg-[#E8F5F0]' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                  {todayTraining.completed ? <CheckCircle size={20} className="text-[#0F9E75]" /> : <Activity size={20} className="text-slate-500" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold text-[#0F9E75] uppercase tracking-wider mb-0.5">
+                    {lang === 'zh' ? '今日訓練 ' + (todayTraining.completed ? '✓' : '進行中') : "Today's Training"}
+                  </p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
+                    {todayTraining.plan.name}
+                  </p>
+                  <p className="text-xs text-slate-500 truncate mt-0.5">
+                    {todayTraining.plan.exercises.length} {lang === 'zh' ? '個動作' : 'exercises'} • {todayTraining.plan.duration} {lang === 'zh' ? '分鐘' : 'min'}
+                  </p>
+                </div>
+                <span className="text-slate-300 text-lg shrink-0">›</span>
+              </div>
+            ) : (
+              <div
+                className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-sm font-bold border-2 border-dashed border-[#0F9E75]/30 bg-[#0F9E75]/5 dark:bg-[#0F9E75]/10 text-[#0F9E75] hover:bg-[#0F9E75]/10 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-[#0F9E75]/20 flex items-center justify-center shrink-0">
+                  <Activity size={16} className="text-[#0F9E75]" />
+                </div>
+                <div className="flex-1">
+                  <p>{lang === 'zh' ? '今天尚未安排訓練' : 'No training scheduled today'}</p>
+                  <p className="text-[#0F9E75]/70 text-[10px] font-bold mt-0.5 uppercase tracking-wide">
+                    {lang === 'zh' ? '生成專屬菜單 →' : 'Generate plan →'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </Link>
 
           {/* Daily targets */}
-          <div className="card-lg p-6 bg-white/70 backdrop-blur-xl border-white/40 shadow-sm transition-all hover:shadow-md">
+          <div className="card-lg p-6 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border-white/40 dark:border-slate-700/40 shadow-sm transition-all hover:shadow-md">
             <div className="flex items-center justify-between mb-5">
-              <p className="font-bold text-slate-800 tracking-tight">{t.dashboard.targets}</p>
+              <p className="font-bold text-slate-800 dark:text-slate-200 tracking-tight">{t.dashboard.targets}</p>
               <div className="flex flex-col items-end">
                 <span className="text-lg font-black text-[#0F9E75] leading-none">
                   {targets.calories}
@@ -242,7 +313,7 @@ export default function DashboardPage() {
               <div className="card-lg p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <TrendingUp size={14} className="text-[#0F9E75]" />
-                  <p className="text-xs font-black uppercase tracking-wider text-slate-500">
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     {lang === 'zh' ? '今日達成率' : "Today's Progress"}
                   </p>
                 </div>
@@ -269,7 +340,7 @@ export default function DashboardPage() {
                   </p>
                   <div className="flex gap-3 flex-wrap">
                     {(['breakfast', 'lunch', 'dinner'] as const).map((type) => (
-                      <span key={type} className="text-xs font-semibold text-slate-600 truncate">
+                      <span key={type} className="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">
                         {todayMeals[type].name}
                       </span>
                     ))}
@@ -290,6 +361,14 @@ export default function DashboardPage() {
               </div>
             )}
           </Link>
+
+          {/* Support Developer */}
+          {inbodyHistoryLength > 3 && (
+            <>
+              <AdBanner />
+              <DonationBox />
+            </>
+          )}
         </>
       )}
 

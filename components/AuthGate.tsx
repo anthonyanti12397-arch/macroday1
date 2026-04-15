@@ -1,13 +1,23 @@
 'use client'
 
 import { SessionProvider, useSession } from 'next-auth/react'
+import { useEffect } from 'react'
 import { useGuestSession } from '@/hooks/useGuestSession'
 import LoginScreen from './LoginScreen'
 import LoadingScreen from './LoadingScreen'
+import { getUserProfile, saveUserProfile } from '@/lib/storage'
 
 function AuthGateInner({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const { isGuest, loginAsGuest, isHydrated } = useGuestSession()
+
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    const profile = getUserProfile()
+    if (profile && profile.isPro !== session?.user?.isPro) {
+      saveUserProfile({ ...profile, isPro: !!session?.user?.isPro })
+    }
+  }, [session?.user?.isPro, status])
 
   // 1. Wait for hydration (reading localStorage) and NextAuth status
   if (!isHydrated || status === 'loading') {

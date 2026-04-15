@@ -34,7 +34,7 @@ export default function ComplianceCalendar() {
   return (
     <div className="card-lg p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
           {lang === 'zh' ? '目標達成日曆' : 'Compliance Calendar'}
           <div className="group relative">
             <Info size={14} className="text-slate-300 cursor-help" />
@@ -46,18 +46,18 @@ export default function ComplianceCalendar() {
         <div className="flex gap-3">
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-[#0F9E75]" title="Full" />
-            <span className="text-[10px] font-bold text-slate-500">{stats.full}</span>
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{stats.full}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-[#E09B20]" title="Partial" />
-            <span className="text-[10px] font-bold text-slate-500">{stats.partial}</span>
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{stats.partial}</span>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-7 gap-2">
         {dayLabels.map(l => (
-          <div key={l} className="text-[10px] font-black text-slate-300 text-center uppercase">{l}</div>
+          <div key={l} className="text-[10px] font-black text-slate-300 dark:text-slate-500 text-center uppercase">{l}</div>
         ))}
         {days.map((day, idx) => {
           const today = new Date(); const isToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}` === day.ds
@@ -70,12 +70,12 @@ export default function ComplianceCalendar() {
               className={`aspect-square rounded-lg flex items-center justify-center relative overflow-hidden ${
                 day.status === 'full' ? 'bg-[#0F9E75]/10 border border-[#0F9E75]/20' :
                 day.status === 'partial' ? 'bg-[#E09B20]/10 border border-[#E09B20]/20' :
-                'bg-slate-50 border border-slate-100'
+                'bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600'
               } ${isToday ? 'ring-2 ring-[#0F9E75]/40' : ''}`}
             >
               {day.status === 'full' && <CheckCircle2 size={12} className="text-[#0F9E75]" />}
               {day.status === 'partial' && <Circle size={10} className="text-[#E09B20] fill-[#E09B20]/20" />}
-              {day.status === 'none' && <div className="w-1 h-1 rounded-full bg-slate-200" />}
+              {day.status === 'none' && <div className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-500" />}
               
               <span className="absolute top-0.5 right-1 text-[7px] font-black text-slate-400/30">
                 {day.date.getDate()}
