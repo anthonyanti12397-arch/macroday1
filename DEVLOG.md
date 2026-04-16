@@ -124,6 +124,11 @@ BMR 使用 Mifflin-St Jeor 公式：
 
 如果沒有 InBody 機器數據，以體重估算蛋白質（×1.6 維持 / ×1.8 減脂 / ×2.0 增肌）。
 
+#### 4.5 基礎架構 (Infrastructure)
+*   **數據庫 (Database)**: 已配置 Neon PostgreSQL。
+    *   **URL**: `postgresql://neondb_owner:npg_YD21tKXLWdrG@ep-purple-cherry-ant89kmq.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require`
+    *   **狀態**: 已備好，待 Phase 8 啟動同步。
+
 ### AI 餐單生成 (`app/api/generate-daily/route.ts`)
 
 **雙軌系統（重要！降低 API 費用）：**
@@ -732,4 +737,40 @@ interface AvatarProps {
 *   **核心功能**：
     *   **專業日曆**：重構 `ComplianceCalendar`，採標準月視圖（對齊 1 號與星期），支持月份切換。
     *   **成長藍圖 (Roadmap)**：新增 `/roadmap` 頁面，以時間軸形式記錄用戶從「加入」、「首條記錄」、「體重突破」、「衣服解鎖」到「積分里程碑」的全過程。
-*   **技術路徑**：JS Date 對齊邏輯重寫 + Framer Motion 垂直時間軸組件。
+
+---
+
+## 14. [審計與同步] 20260416_ANTHONY — 待辦清單與技術債
+
+在今日的深度評審中，我們識別出以下尚未完成或需要修復的關鍵任務。這些任務將作為接下來開發的導航。
+
+### A. 基礎設施殘項 (Critical Infrastructure)
+- [ ] **數據庫同步 (Prisma Push)**: 雖然 Neon URL 已備，但需執行 `npx prisma db push` 以初始化雲端表結構。
+- [ ] **域驗證 (Resend)**: 需要手動在 DNS 加入記錄，解除 1 個 Email 的發送限制。
+- [ ] **OAuth 完善**: 需要在 Google Console 加入 Production 環境的 Callback URL。
+
+### B. 功能實現缺口 (Feature Gaps)
+- [ ] **支付閉環 (Stripe Webhook)**: 缺少 `/api/webhook/stripe` 邏輯，付款成功後用戶無法自動升級 Pro。
+- [ ] **打印優化 (PDF CSS)**: 缺少 `@media print` 的精準樣式控制。
+- [ ] **社區功能 (Community Logic)**: 論壇發帖、點讚、三餐打卡的 CRUD 邏輯待開發。
+
+### C. 00x 系列進度與缺陷 (00x Roadmap Status)
+- [x] **Plan 001 (AI Variety)**: 已完成 (2026-04-17) - 加入隨機種子、動態 diversity、「重新生成」按鈕、排除最近3天動作。
+- [x] **Plan 002 (AI Photo)**: 已完成 (2026-04-17) - Claude Vision API 食物識別、拍照/上傳UI、替換/添加模式。
+- [x] **Plan 003 (Social/Pricing)**: 已完成 (2026-04-17)
+    - [ ] 將定價調整為 **$8 HKD/月** (待實施)。
+    - [x] 開發 **角色光環 (Glory Aura)** 特效 (已完成，基於 macroScore 的動態粒子效果)。
+    - [x] 建立 **全螢幕展示 (Showcase)** 頁面 (已完成，含榮譽等級系統與成就徽章)。
+    - [x] 建立 **社群脈搏 (SocialPulse)** 組件 (已完成，即時活動顯示)。
+- [ ] **Plan 005 (Calendar/Roadmap)**:
+    - [x] InBody 歷史編輯功能 (已完成 2026-04-16)。
+    - [x] InBody 補錄日期功能 (已完成 2026-04-16)。
+    - [ ] **專業月份日曆重構** (急需：目前 28 天滑動窗口視圖不夠專業)。
+    - [ ] **個人成長藍圖 (/roadmap)** 頁面。
+
+### D. 下一步行動建議
+1. **實施 Plan 004 (登入功能)**: Google/Apple/Email 登入（NextAuth.js）。
+2. **調整定價策略**: 確保商業邏輯正確，將訂閱調整為 **$8 HKD/月**。
+3. **重寫 ComplianceCalendar**: 解決「不像樣」的日曆問題。
+4. **開發 Plan 005**: 專業月份日曆 + 個人成長藍圖 (/roadmap) 頁面。
+5. **初始化數據庫表**: 為雲端同步做準備 (Prisma Push)。
