@@ -9,7 +9,9 @@ import { toast } from 'sonner'
 interface InBodyFormProps {
   latestRecord: InBodyRecord | null
   latestProfile: UserProfile | null
+  editingRecord?: InBodyRecord | null
   onSaved: () => void
+  onCancelEdit?: () => void
 }
 
 const RESTRICTIONS = ['No dairy', 'No gluten', 'Vegetarian', 'Vegan', 'No nuts', 'Halal']
@@ -70,19 +72,25 @@ const RESTRICTION_ZH: Record<string, string> = {
   Vegetarian: '素食', Vegan: '純素', 'No nuts': '無堅果', Halal: '清真',
 }
 
-export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InBodyFormProps) {
+export default function InBodyForm({ latestRecord, latestProfile, editingRecord, onSaved, onCancelEdit }: InBodyFormProps) {
   const { lang, t } = useLang()
   const i = t.inbody
 
-  const [weight, setWeight] = useState(latestRecord?.weight.toString() ?? '')
-  const [height, setHeight] = useState(latestRecord?.height.toString() ?? '')
-  const [age, setAge] = useState(latestRecord?.age.toString() ?? '')
-  const [gender, setGender] = useState<'male' | 'female'>(latestRecord?.gender ?? 'male')
-  const [bodyFat, setBodyFat] = useState(latestRecord?.bodyFat?.toString() ?? '')
-  const [muscleMass, setMuscleMass] = useState(latestRecord?.skeletalMuscleMass?.toString() ?? '')
-  const [bmr, setBmr] = useState(latestRecord?.bmr?.toString() ?? '')
-  const [visceralFat, setVisceralFat] = useState(latestRecord?.visceralFatLevel?.toString() ?? '')
-  const [bodyWater, setBodyWater] = useState(latestRecord?.bodyWater?.toString() ?? '')
+  const initialRecord = editingRecord || latestRecord
+  
+  const [weight, setWeight] = useState(initialRecord?.weight.toString() ?? '')
+  const [height, setHeight] = useState(initialRecord?.height.toString() ?? '')
+  const [age, setAge] = useState(initialRecord?.age.toString() ?? '')
+  const [date, setDate] = useState(editingRecord?.date ?? (() => {
+    const d = new Date(); 
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })())
+  const [gender, setGender] = useState<'male' | 'female'>(initialRecord?.gender ?? 'male')
+  const [bodyFat, setBodyFat] = useState(initialRecord?.bodyFat?.toString() ?? '')
+  const [muscleMass, setMuscleMass] = useState(initialRecord?.skeletalMuscleMass?.toString() ?? '')
+  const [bmr, setBmr] = useState(initialRecord?.bmr?.toString() ?? '')
+  const [visceralFat, setVisceralFat] = useState(initialRecord?.visceralFatLevel?.toString() ?? '')
+  const [bodyWater, setBodyWater] = useState(initialRecord?.bodyWater?.toString() ?? '')
   const [goal, setGoal] = useState<UserProfile['goal']>(latestProfile?.goal ?? 'maintain')
   const [restrictions, setRestrictions] = useState<string[]>(latestProfile?.dietaryRestrictions ?? [])
   const [proteinPrefs, setProteinPrefs] = useState<string[]>(latestProfile?.proteinPreferences ?? [])
@@ -135,8 +143,8 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
     setError('')
 
     const record: InBodyRecord = {
-      id: crypto.randomUUID(),
-      date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })(),
+      id: editingRecord?.id || crypto.randomUUID(),
+      date,
       weight: Number(weight), height: Number(height), age: Number(age), gender,
       ...(bodyFat ? { bodyFat: Number(bodyFat) } : {}),
       ...(muscleMass ? { skeletalMuscleMass: Number(muscleMass) } : {}),
@@ -147,6 +155,7 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
 
     const profile: UserProfile = {
       goal, dietaryRestrictions: restrictions,
+      activityLevel: latestProfile?.activityLevel ?? 'moderate',
       fitnessLevel,
       proteinPreferences: proteinPrefs, carbPreferences: carbPrefs,
       cuisinePreferences: [],
@@ -170,6 +179,15 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
           {i.basicInfo} <span className="text-red-400">{i.required}</span>
         </p>
         <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight pl-1">{lang === 'zh' ? '日期' : 'Date'}</label>
+            <input 
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full h-12 px-4 rounded-2xl bg-white/50 backdrop-blur-sm border border-zinc-200 focus:border-[#0F9E75] focus:ring-0 text-slate-800 font-bold transition-all"
+            />
+          </div>
           <Field label={`${i.weight} *`} value={weight} onChange={setWeight} placeholder="75.0" />
           <Field label={`${i.height} *`} value={height} onChange={setHeight} placeholder="175" />
           <Field label={`${i.age} *`} value={age} onChange={setAge} placeholder="28" />
@@ -340,7 +358,14 @@ export default function InBodyForm({ latestRecord, latestProfile, onSaved }: InB
         </div>
       </div>
 
-      <button type="submit" className="w-full btn-primary">{t.btn.save}</button>
+      <div className="flex gap-3">
+        {editingRecord && (
+          <button type="button" onClick={onCancelEdit} className="flex-1 h-12 rounded-2xl border border-zinc-200 text-zinc-500 font-bold hover:bg-zinc-50 transition-all">
+            {lang === 'zh' ? '取消' : 'Cancel'}
+          </button>
+        )}
+        <button type="submit" className="flex-[2] btn-primary">{t.btn.save}</button>
+      </div>
     </form>
   )
 }

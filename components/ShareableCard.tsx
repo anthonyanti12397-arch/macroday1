@@ -18,10 +18,10 @@ export default function ShareableCard({ dailyMeals, profile, inbody }: Shareable
   
   const total = (['breakfast', 'lunch', 'dinner'] as const).reduce(
     (acc, mt) => ({
-      cal: acc.cal + (dailyMeals[mt].calories ?? 0),
-      p: acc.p + (dailyMeals[mt].protein ?? 0),
-      c: acc.c + (dailyMeals[mt].carbs ?? 0),
-      f: acc.f + (dailyMeals[mt].fat ?? 0),
+      cal: acc.cal + (dailyMeals[mt]?.calories ?? 0),
+      p: acc.p + (dailyMeals[mt]?.protein ?? 0),
+      c: acc.c + (dailyMeals[mt]?.carbs ?? 0),
+      f: acc.f + (dailyMeals[mt]?.fat ?? 0),
     }),
     { cal: 0, p: 0, c: 0, f: 0 }
   )
@@ -84,7 +84,7 @@ export default function ShareableCard({ dailyMeals, profile, inbody }: Shareable
 
       {/* Meal Highlights */}
       <div className="space-y-3 relative z-10 mb-10">
-        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Today's Menu Selection</p>
+        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Today&apos;s Menu Selection</p>
         <MealLine type={lang === 'zh' ? '早餐' : 'Breakfast'} name={dailyMeals.breakfast.name} />
         <MealLine type={lang === 'zh' ? '午餐' : 'Lunch'} name={dailyMeals.lunch.name} />
         <MealLine type={lang === 'zh' ? '晚餐' : 'Dinner'} name={dailyMeals.dinner.name} />

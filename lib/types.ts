@@ -21,11 +21,12 @@ export interface InBodyRecord {
 
 export interface UserProfile {
   goal: 'muscle_gain' | 'fat_loss' | 'maintain'
+  activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
   fitnessLevel?: 'beginner' | 'active' | 'advanced'
   dietaryRestrictions: string[]
-  proteinPreferences: string[]
-  carbPreferences: string[]
-  cuisinePreferences: string[]
+  proteinPreferences?: string[]
+  carbPreferences?: string[]
+  cuisinePreferences?: string[]
   preferredCuisine?: PreferredCuisine
   dislikedIngredients?: string[]
   cookingStyle: 'home' | 'takeout' | 'both'
@@ -169,6 +170,13 @@ export interface TrainingPlan {
   cooldown: string
   estimatedCalories: number
   notes: string
+  seed?: string
+  diversity?: number
+}
+
+export interface TrainingVariety {
+  exerciseName: string
+  date: string
 }
 
 export interface TrainingRecord {
@@ -176,4 +184,5 @@ export interface TrainingRecord {
   plan: TrainingPlan
   completed: boolean
   completedAt?: string
+  regenerationCount?: number
 }

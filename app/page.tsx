@@ -224,8 +224,8 @@ export default function DashboardPage() {
               <span className="text-white text-xs font-semibold">
                 {t.cookingStyle[profile.cookingStyle]}
               </span>
-              {profile.proteinPreferences.length > 0 && (
-                <span className="text-white/50 text-xs">· {profile.proteinPreferences.slice(0, 3).join(', ')}</span>
+              {(profile.proteinPreferences ?? []).length > 0 && (
+                <span className="text-white/50 text-xs">· {profile.proteinPreferences?.slice(0, 3).join(', ')}</span>
               )}
               <Link href="/inbody" className="ml-auto text-white/60 text-[10px] font-semibold hover:text-white">Edit ›</Link>
             </div>

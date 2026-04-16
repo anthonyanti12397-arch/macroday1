@@ -85,7 +85,7 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, shadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
+      whileHover={{ y: -4 }}
       className="group relative overflow-hidden rounded-[32px] border border-white/20 bg-white/70 backdrop-blur-xl transition-all duration-500 hover:bg-white/80 dark:bg-slate-900/40 dark:border-white/5 shadow-sm"
     >
       {/* Image with overlay */}
@@ -289,9 +289,9 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
                     <CheckCircle2 size={16} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-wider text-[#0F9E75] mb-0.5">Coach's Thought</p>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-[#0F9E75] mb-0.5">Coach&apos;s Thought</p>
                     <p className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-relaxed italic">
-                      "{coachOpinion}"
+                      &quot;{coachOpinion}&quot;
                     </p>
                   </div>
                 </div>

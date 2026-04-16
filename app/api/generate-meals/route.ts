@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { getServerSession } from 'next-auth'
-import type { InBodyRecord, UserProfile, WeeklyPlan, Meal } from '@/lib/types'
+import type { WeeklyPlan, Meal, InBodyRecord, UserProfile } from '@/lib/types'
 import { GROK_MODEL } from '@/lib/constants'
 import { authOptions } from '@/lib/auth'
 import { saveGeneratedWeeklyPlan } from '@/lib/db'
 import { getPromptVersion } from '@/lib/prompts'
 import { GenerateMealsSchema } from '@/lib/validations'
+import { hydrateInBodyRecord, normalizeUserProfile, formatArrayAsString } from '@/lib/objectBuilders'
 import { ZodError } from 'zod'
 
 function getClient() {
@@ -72,17 +73,19 @@ export async function POST(req: NextRequest) {
     }
 
     const { inbody, profile, availableIngredients = [], lang = 'zh', isTakeoutMode = false, locationContext = '' } = validation.data
-    const isChinese = lang === 'zh'
-    const { targetCalories, targetProtein } = calcTargets(inbody, profile.goal)
+    const isAuthed = !!session?.user?.id
 
-    const restrictions = profile.dietaryRestrictions.length > 0
-      ? profile.dietaryRestrictions.join(', ')
-      : 'None'
+    const inbodyWithMeta = hydrateInBodyRecord(inbody)
+    const profileWithDefaults = normalizeUserProfile(profile, { isTakeoutMode, isAuthed })
+
+    const isChinese = lang === 'zh'
+    const { targetCalories, targetProtein } = calcTargets(inbodyWithMeta, profileWithDefaults.goal)
+
+    const restrictions = formatArrayAsString(profile.dietaryRestrictions, undefined, 'None')
     const ingredients = availableIngredients.length > 0
       ? availableIngredients.join(', ')
       : 'No specific preferences'
-    const cuisines = (profile.cuisinePreferences ?? []).length > 0
-      ? profile.cuisinePreferences.join(', ') : 'any'
+    const cuisines = formatArrayAsString(profile.cuisinePreferences)
 
     // Build optional body stats context for Grok
     const statsLines = [
@@ -193,8 +196,8 @@ Return ONLY a JSON object with this exact structure:
       promptVersion: getPromptVersion(),
     }
 
-    if (session?.user?.id) {
-      await saveGeneratedWeeklyPlan(session.user.id, weeklyPlan, profile, getPromptVersion())
+    if (isAuthed) {
+      await saveGeneratedWeeklyPlan(session!.user!.id, weeklyPlan, profileWithDefaults, getPromptVersion())
     }
 
     return NextResponse.json(weeklyPlan)

@@ -23,11 +23,12 @@ export default function TrainingPage() {
   const [inbody, setInbody] = useState<InBodyRecord | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [todayRecord, setTodayRecord] = useState<TrainingRecord | null>(null)
-  
+
   const [focusArea, setFocusArea] = useState('full')
   const [isGenerating, setIsGenerating] = useState(false)
   const [loadingText, setLoadingText] = useState('')
   const [checkinOpen, setCheckinOpen] = useState(false)
+  const [diversity, setDiversity] = useState(0.5)
 
   useEffect(() => {
     setInbody(getLatestInBody())
@@ -39,16 +40,39 @@ export default function TrainingPage() {
     if (today) setTodayRecord(today)
   }, [])
 
-  async function handleGenerate() {
+  function getExcludedExercises(): string[] {
+    const history = getTrainingHistory()
+    const today = new Date()
+    const last3Days: string[] = []
+
+    // Get exercise names from last 3 days
+    for (let i = 1; i <= 3; i++) {
+      const date = new Date(today)
+      date.setDate(date.getDate() - i)
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      const record = history.find(r => r.date === dateStr)
+      if (record?.plan?.exercises) {
+        last3Days.push(...record.plan.exercises.map(ex => ex.name))
+      }
+    }
+
+    return last3Days
+  }
+
+  async function handleGenerate(isRegenerate: boolean = false) {
     if (!inbody || !profile) return
     setIsGenerating(true)
     setLoadingText(lang === 'zh' ? '分析肌肉數據...' : 'Analyzing data...')
-    
+
     try {
       const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()
-      
+
       setTimeout(() => setLoadingText(lang === 'zh' ? '配對最佳動作...' : 'Matching exercises...'), 1500)
       setTimeout(() => setLoadingText(lang === 'zh' ? '建立訓練清單...' : 'Building plan...'), 3500)
+
+      const excludedExercises = isRegenerate ? getExcludedExercises() : []
+      const currentDiversity = isRegenerate ? Math.min(diversity + 0.2, 1.0) : diversity
+      const seed = `${todayStr}_${Date.now()}`
 
       const response = await fetch('/api/generate-training', {
         method: 'POST',
@@ -64,21 +88,26 @@ export default function TrainingPage() {
           date: todayStr,
           focus: focusArea,
           fitnessLevel: profile.fitnessLevel || 'beginner',
+          diversity: currentDiversity,
+          excludeExercises: excludedExercises,
+          seed,
         })
       })
 
       if (!response.ok) throw new Error('Failed to generate')
-      
+
       const plan: TrainingPlan = await response.json()
-      
+
       const record: TrainingRecord = {
         date: todayStr,
         plan,
-        completed: false
+        completed: false,
+        regenerationCount: isRegenerate ? (todayRecord?.regenerationCount ?? 0) + 1 : 0
       }
-      
+
       saveTrainingRecord(record)
       setTodayRecord(record)
+      setDiversity(currentDiversity)
       toast.success(lang === 'zh' ? '訓練清單已生成！' : 'Training plan generated!')
     } catch (err) {
       toast.error(lang === 'zh' ? '生成失敗，請重試' : 'Generation failed. Please try again.')
@@ -202,13 +231,20 @@ export default function TrainingPage() {
               </div>
             </div>
 
-            {!todayRecord.completed && (
-               <button 
-                 onClick={handleComplete}
-                 className="w-full btn-primary mt-6 !text-lg !h-14 shadow-lg shadow-[#0F9E75]/30">
-                 📸 {lang === 'zh' ? '拍照打卡得分' : 'Photo Check-in'}
-               </button>
-            )}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleComplete}
+                className="flex-1 btn-primary !text-lg !h-14 shadow-lg shadow-[#0F9E75]/30">
+                📸 {lang === 'zh' ? '拍照打卡得分' : 'Photo Check-in'}
+              </button>
+              <button
+                onClick={() => handleGenerate(true)}
+                disabled={isGenerating}
+                className="flex-1 btn-secondary !text-lg !h-14 shadow-lg shadow-slate-300/30 dark:shadow-slate-700/30">
+                🔄 {lang === 'zh' ? '重新生成' : 'Regenerate'}
+                {todayRecord.regenerationCount ? ` (${todayRecord.regenerationCount})` : ''}
+              </button>
+            </div>
             
             {checkinOpen && (
               <CheckInCamera

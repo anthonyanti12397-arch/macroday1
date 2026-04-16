@@ -7,9 +7,10 @@ import InBodyForm from '@/components/InBodyForm'
 import InBodyChartModal from '@/components/InBodyChartModal'
 import UpgradePrompt from '@/components/UpgradePrompt'
 import { useLang } from '@/contexts/LangContext'
-import { Activity, CheckCircle, TrendingUp, Lock } from 'lucide-react'
+import { Activity, CheckCircle, TrendingUp, Lock, Edit2, Trash2, X } from 'lucide-react'
 import ComparisonCard from '@/components/ComparisonCard'
 import { toast } from 'sonner'
+import { deleteInBodyRecord } from '@/lib/storage'
 
 export default function InBodyPage() {
   const { lang, t } = useLang()
@@ -20,6 +21,7 @@ export default function InBodyPage() {
   const [saved, setSaved] = useState(false)
   const [showChart, setShowChart] = useState(false)
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [editingRecord, setEditingRecord] = useState<InBodyRecord | null>(null)
 
   function load() {
     setHistory(getInBodyHistory())
@@ -32,9 +34,23 @@ export default function InBodyPage() {
   function handleSaved() {
     load()
     setSaved(true)
+    setEditingRecord(null)
     setTimeout(() => setSaved(false), 2500)
     addMacroScore(20)
     toast.success(lang === 'zh' ? '🏆 +20 分！記錄了新的資料' : '🏆 +20 pts! New data added')
+  }
+
+  function handleEdit(record: InBodyRecord) {
+    setEditingRecord(record)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function handleDelete(id: string) {
+    if (confirm(lang === 'zh' ? '確定要刪除這條記錄嗎？' : 'Are you sure you want to delete this record?')) {
+      deleteInBodyRecord(id)
+      load()
+      toast.success(lang === 'zh' ? '記錄已刪除' : 'Record deleted')
+    }
   }
 
   return (
@@ -54,7 +70,7 @@ export default function InBodyPage() {
       <div className="card-lg p-5">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-bold text-slate-800 dark:text-slate-200">
-            {latest ? i.updateData : i.addData}
+            {editingRecord ? (lang === 'zh' ? '編輯記錄' : 'Edit Record') : (latest ? i.updateData : i.addData)}
           </h2>
           {saved && (
             <div className="flex items-center gap-1.5 text-xs font-semibold text-[#0F9E75] bg-[#E8F5F0] px-3 py-1.5 rounded-full">
@@ -63,7 +79,13 @@ export default function InBodyPage() {
             </div>
           )}
         </div>
-        <InBodyForm latestRecord={latest} latestProfile={profile} onSaved={handleSaved} />
+        <InBodyForm 
+          latestRecord={latest} 
+          latestProfile={profile} 
+          editingRecord={editingRecord}
+          onSaved={handleSaved} 
+          onCancelEdit={() => setEditingRecord(null)}
+        />
       </div>
 
       {history.length >= 2 && (
@@ -97,8 +119,18 @@ export default function InBodyPage() {
         <div className="space-y-3">
           <p className="section-label pl-1">{i.history}</p>
           {[...history].reverse().map((r) => (
-            <div key={r.id} className="card p-4">
-              <p className="text-xs font-semibold text-[#0F9E75] mb-2">{r.date}</p>
+            <div key={r.id} className="card p-4 group relative">
+              <div className="flex justify-between items-start mb-2">
+                <p className="text-xs font-semibold text-[#0F9E75]">{r.date}</p>
+                <div className="flex gap-2">
+                  <button onClick={() => handleEdit(r)} className="p-1.5 text-slate-400 hover:text-[#0F9E75] hover:bg-[#0F9E75]/10 rounded-lg transition-colors">
+                    <Edit2 size={14} />
+                  </button>
+                  <button onClick={() => handleDelete(r.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
               <div className="flex flex-wrap gap-x-5 gap-y-2">
                 <HistStat label={i.weight.split(' ')[0]} value={`${r.weight}kg`} />
                 <HistStat label={i.height.split(' ')[0]} value={`${r.height}cm`} />

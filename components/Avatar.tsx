@@ -10,13 +10,15 @@ interface AvatarProps {
   inbody?: InBodyRecord | null
   animated?: boolean
   className?: string
+  macroScore?: number
+  showGloryAura?: boolean
 }
 
 /**
  * Avatar V3: "Exquisite Chibi" Implementation
  * Based on user-provided RPG/Chibi references
  */
-export default function Avatar({ loadout, size = 'md', inbody, animated = false, className = '' }: AvatarProps) {
+export default function Avatar({ loadout, size = 'md', inbody, animated = false, className = '', macroScore = 0, showGloryAura = false }: AvatarProps) {
   const activeLoadout = loadout || {
     head: 'head_none',
     top: 'top_basic_white',
@@ -89,15 +91,51 @@ export default function Avatar({ loadout, size = 'md', inbody, animated = false,
         </motion.g>
       )}
       {parts.accessory.id.includes('aura') && (
-        <motion.circle 
-          cx="50" cy="75" r="42" 
-          stroke={parts.accessory.colors?.primary || '#0F9E75'} 
-          strokeWidth="1.5" 
-          fill="none" 
+        <motion.circle
+          cx="50" cy="75" r="42"
+          stroke={parts.accessory.colors?.primary || '#0F9E75'}
+          strokeWidth="1.5"
+          fill="none"
           strokeDasharray="5 5"
-          animate={{ rotate: 360 }} 
-          transition={{ repeat: Infinity, duration: 10, ease: "linear" }} 
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
         />
+      )}
+
+      {/* GLORY AURA (Based on macroScore) */}
+      {showGloryAura && macroScore > 1000 && (
+        <>
+          {/* Outer glow ring */}
+          <motion.circle
+            cx="50" cy="75" r={48 + (macroScore / 5000) * 10}
+            stroke="#FFD700"
+            strokeWidth="1"
+            fill="none"
+            opacity={0.3 + (Math.min(macroScore, 5000) / 5000) * 0.4}
+            animate={{ rotate: 360, scale: [1, 1.05, 1] }}
+            transition={{ rotate: { repeat: Infinity, duration: 8, ease: "linear" }, scale: { repeat: Infinity, duration: 3 } }}
+          />
+          {/* Particle effects */}
+          {Array.from({ length: Math.min(5, Math.floor(macroScore / 1000)) }).map((_, i) => {
+            const angle = (i / Math.min(5, Math.floor(macroScore / 1000))) * Math.PI * 2;
+            const radius = 50 + (macroScore / 5000) * 15;
+            return (
+              <motion.circle
+                key={`particle-${i}`}
+                cx={50 + Math.cos(angle) * radius}
+                cy={75 + Math.sin(angle) * radius}
+                r="2"
+                fill="#FFD700"
+                opacity={0.6}
+                animate={{
+                  cy: [75 + Math.sin(angle) * radius, 75 + Math.sin(angle) * (radius - 5), 75 + Math.sin(angle) * radius],
+                  opacity: [0.6, 0.2, 0.6]
+                }}
+                transition={{ repeat: Infinity, duration: 2 + i * 0.2 }}
+              />
+            );
+          })}
+        </>
       )}
 
       {/* BODY BASE */}

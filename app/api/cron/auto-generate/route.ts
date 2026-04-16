@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAutoGenerateUsers, getLatestInBodyRecord, saveGeneratedDailyPlan, prisma } from '@/lib/db'
 import { generateDailyMealsInner } from '@/lib/ai-service'
-import type { UserProfile, InBodyRecord } from '@/lib/types'
+import type { InBodyRecord } from '@/lib/types'
+import { normalizeGoal } from '@/lib/objectBuilders'
 
 export async function GET(req: NextRequest) {
   // Security check: Only allow if a secret matches (Vercel Cron security best practice)
@@ -42,17 +43,18 @@ export async function GET(req: NextRequest) {
       }
 
       // 3. Construct profile (extract from DB fields)
-      const profile: UserProfile = {
-        goal: (user.goal as any) || 'maintain',
+      const profile = {
+        goal: normalizeGoal(user.goal as any),
+        activityLevel: 'moderate' as const,
         dietaryRestrictions: (user.dietaryRestrictions as string[]) || [],
         dislikedIngredients: (user.dislikedIngredients as string[]) || [],
         preferredCuisine: (user.preferredCuisine as any) || 'Asian',
         isPro: user.isPro,
         isAdFree: user.isAdFree,
-        proteinPreferences: [],
-        carbPreferences: [],
-        cuisinePreferences: [],
-        cookingStyle: 'both'
+        proteinPreferences: [] as string[],
+        carbPreferences: [] as string[],
+        cuisinePreferences: [] as string[],
+        cookingStyle: 'both' as const,
       }
 
       const inbodyRecord: InBodyRecord = {

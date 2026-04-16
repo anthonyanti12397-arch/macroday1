@@ -18,6 +18,8 @@ export const UserProfileSchema = z.object({
   dislikedIngredients: z.array(z.string()).optional(),
   cuisinePreferences: z.array(z.string()).optional(),
   preferredCuisine: z.string().optional(),
+  proteinPreferences: z.array(z.string()).optional(),
+  carbPreferences: z.array(z.string()).optional(),
 })
 
 export const GenerateMealsSchema = z.object({

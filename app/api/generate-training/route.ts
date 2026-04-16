@@ -14,9 +14,10 @@ function getClient() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { 
-      weight, height, age, gender, goal, 
-      muscleKg, fatPercent, date, focus, fitnessLevel 
+    const {
+      weight, height, age, gender, goal,
+      muscleKg, fatPercent, date, focus, fitnessLevel,
+      diversity = 0.5, excludeExercises = [], seed = ''
     } = body
 
     if (!weight || !height || !age || !gender || !goal || !date) {
@@ -25,14 +26,18 @@ export async function POST(req: NextRequest) {
 
     const prompt = buildTrainingPrompt({
       weight, height, age, gender, goal,
-      muscleKg, fatPercent, date, focus, fitnessLevel
+      muscleKg, fatPercent, date, focus, fitnessLevel,
+      diversity, excludeExercises, seed
     })
+
+    // Adjust temperature based on diversity: 0.5 → 0.7, 1.0 → 0.9
+    const temperature = 0.7 + (diversity - 0.5) * 0.4
 
     const client = getClient()
     const completion = await client.chat.completions.create({
       model: GROK_MODEL,
       max_tokens: 1500,
-      temperature: 0.7,
+      temperature,
       messages: [
         { role: 'system', content: prompt.systemPrompt },
         { role: 'user', content: prompt.userPrompt },
@@ -44,6 +49,10 @@ export async function POST(req: NextRequest) {
     if (!match) throw new Error('Failed to parse JSON from AI response')
 
     const parsed = JSON.parse(match[0]) as TrainingPlan
+
+    // Include seed and diversity in response
+    if (seed) parsed.seed = seed
+    parsed.diversity = diversity
 
     return NextResponse.json(parsed)
   } catch (err) {

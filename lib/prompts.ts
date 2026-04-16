@@ -1,5 +1,6 @@
 import { PROMPT_VERSION } from '@/lib/constants'
 import type { InBodyRecord, PreferredCuisine, UserProfile } from '@/lib/types'
+import { formatArrayAsString } from '@/lib/objectBuilders'
 
 const CUISINE_PROMPTS: Record<PreferredCuisine, string> = {
   Argentine:
@@ -59,9 +60,9 @@ export function buildDailyPrompt(input: {
   const targets = calcTargets(inbody, profile.goal)
   const targetCalories = targets.targetCalories + bonusCalories
   const targetProtein = targets.targetProtein // Keep protein same, mostly want carbs/fat for bonus calories
-  const restrictions = profile.dietaryRestrictions.length > 0 ? profile.dietaryRestrictions.join(', ') : 'None'
-  const proteins = profile.proteinPreferences.length > 0 ? profile.proteinPreferences.join(', ') : 'any'
-  const carbs = profile.carbPreferences.length > 0 ? profile.carbPreferences.join(', ') : 'any'
+  const restrictions = formatArrayAsString(profile.dietaryRestrictions, undefined, 'None')
+  const proteins = formatArrayAsString(profile.proteinPreferences)
+  const carbs = formatArrayAsString(profile.carbPreferences)
   const preferredCuisine = profile.preferredCuisine ?? 'High Protein Classics'
   const cuisineNote = CUISINE_PROMPTS[preferredCuisine]
   const disliked = [...(profile.dislikedIngredients ?? []), ...dislikedIngredients]
@@ -191,7 +192,20 @@ export function buildTrainingPrompt(input: {
   date: string
   focus?: 'upper' | 'lower' | 'full' | 'cardio' | string
   fitnessLevel?: 'beginner' | 'active' | 'advanced'
+  diversity?: number
+  excludeExercises?: string[]
+  seed?: string
 }) {
+  const { diversity = 0.5, excludeExercises = [], seed = '' } = input
+
+  const excludeInstruction = excludeExercises.length > 0
+    ? `\nIMPORTANT: Avoid these exercises entirely (used in last 3 days): ${excludeExercises.join(', ')}. Use completely different exercises instead.`
+    : ''
+
+  const diversityInstruction = diversity > 0.7
+    ? '\nEmphasis on VARIETY: Create unconventional exercises and creative exercise combinations. Avoid common gym exercise names—be creative and suggest lesser-known but effective movements.'
+    : ''
+
   return {
     promptVersion: PROMPT_VERSION,
     systemPrompt: 'You are MacroDay, an expert fitness and strength coach. Return only valid JSON with no markdown.',
@@ -201,6 +215,7 @@ Composition: ${input.fatPercent ? input.fatPercent + '% fat' : 'unknown fat'}, $
 Goal: ${input.goal}
 Focus Area: ${input.focus || 'full'}
 Fitness Level: ${input.fitnessLevel || 'beginner'}
+${seed ? `Seed: ${seed}` : ''}
 
 Strategy based on Goal:
 - fat_loss: High reps (15-20), supersets, include cardio, 30-45s rest
@@ -212,7 +227,7 @@ Strategy based on Fitness Level:
 - active: Mix of machines and free weights
 - advanced: Free weights, barbell lifts, drop-sets, advanced techniques
 
-Target Area: Ensure the exercises strongly correlate with the requested Focus Area (${input.focus || 'full'}).
+Target Area: Ensure the exercises strongly correlate with the requested Focus Area (${input.focus || 'full'}).${excludeInstruction}${diversityInstruction}
 
 Requirements:
 - 1 Warmup exercise

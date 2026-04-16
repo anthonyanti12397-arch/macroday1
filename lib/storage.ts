@@ -20,10 +20,25 @@ const KEYS = {
 export function saveInBodyRecord(record: InBodyRecord): void {
   try {
     const history = getInBodyHistory()
-    history.push(record)
+    const idx = history.findIndex(r => r.id === record.id)
+    if (idx >= 0) {
+      history[idx] = record
+    } else {
+      history.push(record)
+    }
     localStorage.setItem(KEYS.INBODY_HISTORY, JSON.stringify(history))
   } catch {
     // SSR or storage unavailable
+  }
+}
+
+export function deleteInBodyRecord(id: string): void {
+  try {
+    const history = getInBodyHistory()
+    const updated = history.filter(r => r.id !== id)
+    localStorage.setItem(KEYS.INBODY_HISTORY, JSON.stringify(updated))
+  } catch {
+    // SSR
   }
 }
 

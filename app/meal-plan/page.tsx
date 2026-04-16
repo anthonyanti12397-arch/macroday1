@@ -28,6 +28,7 @@ const UpgradePrompt = dynamic(() => import('@/components/UpgradePrompt'))
 const ExportPDFButton = dynamic(() => import('@/components/ExportPDFButton'), { ssr: false })
 const ShareButton = dynamic(() => import('@/components/ShareButton'), { ssr: false })
 const UsageCounter = dynamic(() => import('@/components/UsageCounter'))
+const FoodVisionModal = dynamic(() => import('@/components/FoodVisionModal'), { ssr: false })
 import { canGenerateDaily, canUseFeature, isProUser } from '@/lib/featureGate'
 import { getCurrentLocation, getAddressFromCoords } from '@/lib/location'
 
@@ -72,6 +73,8 @@ export default function MealPlanPage() {
   const [isTakeoutMode, setIsTakeoutMode] = useState(false)
   const [locationContext, setLocationContext] = useState('')
   const [fetchingLocation, setFetchingLocation] = useState(false)
+  const [isVisionOpen, setIsVisionOpen] = useState(false)
+  const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner'>('breakfast')
 
   const generateImages = useCallback(async (meals: DailyMeals) => {
     const mealTypes = ['breakfast', 'lunch', 'dinner'] as const
@@ -132,6 +135,37 @@ export default function MealPlanPage() {
 
     await Promise.all(tasks)
   }, [])
+
+  function handleSubstituteMeal(meal: Meal) {
+    if (!dailyMeals) return
+    const updated = {
+      ...dailyMeals,
+      [selectedMealType]: meal,
+    }
+    saveDailyMeals(updated)
+    setDailyMeals(updated)
+    toast.success(lang === 'zh' ? '餐點已替換' : 'Meal substituted!')
+  }
+
+  function handleAddExtraFood(food: any) {
+    if (!dailyMeals) return
+    const newMeal: Meal = {
+      name: food.foodName,
+      imagePrompt: food.englishName,
+      cookingTime: 0,
+      calories: food.estimatedCalories,
+      protein: food.estimatedProtein,
+      carbs: food.estimatedCarbs,
+      fat: food.estimatedFat,
+      ingredients: food.ingredients,
+      steps: [lang === 'zh' ? '拍照識別的額外食物' : 'Photo-identified extra food'],
+      isTakeout: true,
+      whereToGet: lang === 'zh' ? '直接享用' : 'Enjoy immediately',
+    }
+
+    // Add as snack in future (for now, just show toast)
+    toast.success(lang === 'zh' ? `已新增額外食物：${food.foodName}` : `Added: ${food.foodName}`)
+  }
 
   async function swapMeal(mealType: 'breakfast' | 'lunch' | 'dinner') {
     const currentProfile = getUserProfile()
@@ -390,7 +424,7 @@ export default function MealPlanPage() {
       {/* Hidden Shareable Card */}
       <div className="hidden">
         <div id="shareable-card-target">
-          <ShareableCard inbody={inbody} profile={profile} />
+          {inbody && profile && dailyMeals && <ShareableCard inbody={inbody} profile={profile} dailyMeals={dailyMeals} />}
         </div>
       </div>
 
@@ -513,18 +547,28 @@ export default function MealPlanPage() {
                 const meal: Meal = { ...dailyMeals[type] }
                 const mealTypeLabel = t.meal[type]
                 return (
-                  <MealCard
-                    key={type}
-                    meal={meal}
-                    mealType={mealTypeLabel}
-                    imageLoading={imagesLoading[type] ?? false}
-                    mealKey={type}
-                    onSwap={() => swapMeal(type)}
-                    onDislike={() => handleDislike(type)}
-                    swapping={swapping[type] ?? false}
-                    priority={index === 0}
-                    coachOpinion={dailyMeals.coachOpinion}
-                  />
+                  <div key={type} className="space-y-2">
+                    <button
+                      onClick={() => {
+                        setSelectedMealType(type)
+                        setIsVisionOpen(true)
+                      }}
+                      className="text-xs font-semibold text-[#0F9E75] hover:text-[#0b8462] flex items-center gap-1 transition-colors mb-2"
+                    >
+                      📸 {lang === 'zh' ? '拍照識別餐點' : 'Photo Identify'}
+                    </button>
+                    <MealCard
+                      meal={meal}
+                      mealType={mealTypeLabel}
+                      imageLoading={imagesLoading[type] ?? false}
+                      mealKey={type}
+                      onSwap={() => swapMeal(type)}
+                      onDislike={() => handleDislike(type)}
+                      swapping={swapping[type] ?? false}
+                      priority={index === 0}
+                      coachOpinion={dailyMeals.coachOpinion}
+                    />
+                  </div>
                 )
               })}
 
@@ -630,6 +674,15 @@ export default function MealPlanPage() {
       <ConfettiCelebration
         trigger={showCelebration}
         onComplete={() => setShowCelebration(false)}
+      />
+
+      <FoodVisionModal
+        isOpen={isVisionOpen}
+        onClose={() => setIsVisionOpen(false)}
+        onSubstitute={handleSubstituteMeal}
+        onAddExtra={handleAddExtraFood}
+        currentMealName={dailyMeals ? t.meal[selectedMealType] : undefined}
+        lang={lang}
       />
     </div>
   )
