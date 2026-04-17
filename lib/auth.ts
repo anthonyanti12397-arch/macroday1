@@ -1,5 +1,6 @@
 import { type NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
+import AppleProvider from 'next-auth/providers/apple'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { verifyOTPToken } from '@/lib/otp'
 import { getUserByEmail, upsertUser } from '@/lib/db'
@@ -9,6 +10,10 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+    AppleProvider({
+      clientId: process.env.APPLE_CLIENT_ID!,
+      clientSecret: process.env.APPLE_CLIENT_SECRET!,
     }),
     CredentialsProvider({
       id: 'email-otp',
@@ -65,7 +70,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
-        session.user.provider = token.provider as 'google' | 'email-otp'
+        session.user.provider = token.provider as 'google' | 'apple' | 'email-otp'
         session.user.createdAt = token.createdAt as string
         session.user.lastLogin = token.lastLogin as string
         session.user.isPro = Boolean(token.isPro)

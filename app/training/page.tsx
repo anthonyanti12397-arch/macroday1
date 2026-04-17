@@ -293,9 +293,9 @@ export default function TrainingPage() {
              </div>
           </div>
 
-          <button 
+          <button
             disabled={isGenerating}
-            onClick={handleGenerate}
+            onClick={() => handleGenerate(false)}
             className={`w-full !h-14 !text-base relative overflow-hidden transition-all ${
               isGenerating 
                 ? 'bg-slate-100 text-[#0F9E75] border-2 border-[#0F9E75] opacity-90 cursor-wait shadow-inner rounded-2xl font-bold flex items-center justify-center gap-2'

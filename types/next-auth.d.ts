@@ -8,7 +8,7 @@ declare module 'next-auth' {
       name?: string | null
       email?: string | null
       image?: string | null
-      provider: 'google' | 'email-otp' | 'guest'
+      provider: 'google' | 'apple' | 'email-otp' | 'guest'
       createdAt: string
       lastLogin: string
       isPro: boolean
