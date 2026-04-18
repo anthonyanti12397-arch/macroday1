@@ -24,7 +24,7 @@ export default function SignInPrompt({
     try {
       await signIn(provider, { callbackUrl: '/' })
     } finally {
-      setLoading(provider === null)
+      setLoading(null)
     }
   }
 
