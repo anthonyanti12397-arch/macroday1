@@ -7,7 +7,7 @@ import {
   ChevronRight, Crown, User, Check, Sun, Moon, Monitor, ShieldCheck,
 } from 'lucide-react'
 import { clearSession, getUserProfile, getGuestSession, saveUserProfile } from '@/lib/storage'
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import { BETA_MODE } from '@/lib/constants'
 import DonationBox from '@/components/DonationBox'
 import { useLang } from '@/contexts/LangContext'
@@ -30,9 +30,20 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [logoutConfirm, setLogoutConfirm] = useState(false)
 
-  function handleLogout() {
+  async function handleLogout() {
     if (!logoutConfirm) { setLogoutConfirm(true); return }
+
+    // Clear local storage
     clearSession()
+
+    // Sign out from NextAuth (handles OAuth sessions)
+    // For guest sessions, this just clears the session
+    await signOut({
+      redirect: false, // We'll handle redirect ourselves
+      callbackUrl: '/'
+    })
+
+    // Call parent logout handler
     onLogout()
   }
 

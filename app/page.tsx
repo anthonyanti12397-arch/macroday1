@@ -6,6 +6,7 @@ import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle, Activity, Tre
 import Logo from '@/components/Logo'
 import Avatar from '@/components/Avatar'
 import SettingsSheet from '@/components/SettingsSheet'
+import SignInPrompt from '@/components/SignInPrompt'
 import { useLang } from '@/contexts/LangContext'
 import { getLatestInBody, getUserProfile, getTodayDailyMeals, getGuestSession, getFromStatsCache, getInBodyHistory, getTrainingHistory, getEquippedLoadout, getMacroScore } from '@/lib/storage'
 import { generateStatsHash, setMemoryCache } from '@/lib/cache'
@@ -145,25 +146,36 @@ export default function DashboardPage() {
       {/* Push permission banner */}
       <PushPermissionBanner />
 
-      {/* Guest data warning */}
-      {isGuest && status !== 'authenticated' && !guestWarningDismissed && (
-        <div className="flex items-start gap-3 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/40 dark:border-slate-700/40 rounded-2xl px-5 py-4 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1 h-full bg-amber-400/50" />
-          <ShieldAlert size={18} className="text-amber-500 shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight mb-0.5">
-              {lang === 'zh' ? '訪客模式' : 'Guest Mode'}
-            </p>
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
-              {lang === 'zh' ? '數據僅存於此裝置。登入以同步並保護數據。' : 'Data is local only. Sign in to sync and protect your progress.'}
-            </p>
-          </div>
-          <button 
-            onClick={() => setGuestWarningDismissed(true)} 
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1"
-          >
-            <span className="text-lg leading-none">&times;</span>
-          </button>
+      {/* Login prompt when not authenticated */}
+      {status !== 'authenticated' && !guestWarningDismissed && (
+        <div className="space-y-4">
+          {isGuest && (
+            <div className="flex items-start gap-3 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/40 dark:border-slate-700/40 rounded-2xl px-5 py-4 shadow-sm relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-amber-400/50" />
+              <ShieldAlert size={18} className="text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight mb-0.5">
+                  {lang === 'zh' ? '訪客模式' : 'Guest Mode'}
+                </p>
+                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {lang === 'zh' ? '數據僅存於此裝置。登入以同步並保護數據。' : 'Data is local only. Sign in to sync and protect your progress.'}
+                </p>
+              </div>
+              <button
+                onClick={() => setGuestWarningDismissed(true)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1"
+              >
+                <span className="text-lg leading-none">&times;</span>
+              </button>
+            </div>
+          )}
+
+          {/* Sign In Options */}
+          <SignInPrompt
+            title={lang === 'zh' ? '登入 MacroDay' : 'Sign in to MacroDay'}
+            description={lang === 'zh' ? '同步您的數據，解鎖所有功能' : 'Sync your data and unlock all features'}
+            onClose={() => setGuestWarningDismissed(true)}
+          />
         </div>
       )}
 
