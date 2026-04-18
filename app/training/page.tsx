@@ -135,23 +135,63 @@ export default function TrainingPage() {
 
   if (!inbody || !profile) {
     return (
-      <div className="py-6 space-y-6">
-        <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100 px-2 tracking-tight">
-          {lang === 'zh' ? '訓練' : 'Training'}
-        </h1>
-        <div className="card-lg p-8 text-center space-y-5 mt-10">
-          <div className="w-16 h-16 rounded-3xl bg-[#E8F5F0] flex items-center justify-center mx-auto">
-            <Activity size={28} className="text-[#0F9E75]" />
+      <div className="py-6 space-y-5">
+        <div className="flex items-center gap-3 px-1">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: 'linear-gradient(135deg, #0F9E75 0%, #0BD68A 100%)', boxShadow: '0 4px 12px rgba(15,158,117,0.35)' }}>
+            <Dumbbell size={16} className="text-white" />
           </div>
           <div>
-            <p className="font-bold text-slate-800 dark:text-slate-200 text-lg mb-1">{t.dashboard.noDataTitle}</p>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">
-              {lang === 'zh' ? '需要先填寫身體數據，才能為你安排訓練配對。' : 'Please complete your body data to generate a personalized workout.'}
+            <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none">
+              {lang === 'zh' ? '訓練' : 'Training'}
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {lang === 'zh' ? 'AI 個人化訓練計劃' : 'AI personalised workouts'}
             </p>
           </div>
-          <Link href="/inbody" className="btn-primary inline-flex px-8">
-            {t.btn.getStarted}
-          </Link>
+        </div>
+
+        <div className="relative rounded-3xl overflow-hidden"
+          style={{ background: 'linear-gradient(145deg, #0f1f1a 0%, #111827 60%, #0a1628 100%)', border: '1px solid rgba(15,158,117,0.15)', boxShadow: '0 0 40px rgba(15,158,117,0.06)' }}>
+          <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full opacity-15 pointer-events-none"
+            style={{ background: 'radial-gradient(circle, #0BD68A 0%, transparent 70%)' }} />
+          <div className="relative p-6 space-y-5">
+            {/* Step progress */}
+            <div className="flex items-center gap-2">
+              {[
+                { n: 1, label: lang === 'zh' ? '身體數據' : 'Body Data', done: false },
+                { n: 2, label: lang === 'zh' ? '餐單' : 'Meals', done: false },
+                { n: 3, label: lang === 'zh' ? '訓練' : 'Training', done: false },
+              ].map((step, i) => (
+                <div key={step.n} className="flex items-center gap-2 flex-1">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${step.n === 1 ? 'text-white' : 'text-slate-600 bg-slate-800'}`}
+                    style={step.n === 1 ? { background: 'linear-gradient(135deg, #0F9E75, #0BD68A)' } : {}}>
+                    {step.n}
+                  </div>
+                  <span className={`text-[10px] font-semibold truncate ${step.n === 1 ? 'text-[#0BD68A]' : 'text-slate-600'}`}>{step.label}</span>
+                  {i < 2 && <div className="flex-1 h-px bg-slate-700 mx-1" />}
+                </div>
+              ))}
+            </div>
+
+            <div className="text-center py-4">
+              <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                style={{ background: 'rgba(15,158,117,0.12)', border: '1px solid rgba(15,158,117,0.2)' }}>
+                <Dumbbell size={28} className="text-[#0F9E75]" />
+              </div>
+              <p className="font-bold text-white text-base mb-1">
+                {lang === 'zh' ? '先完成身體數據' : 'Complete Body Data First'}
+              </p>
+              <p className="text-slate-400 text-sm">
+                {lang === 'zh' ? 'AI 需要你的肌肉數據才能配對最佳訓練' : 'AI needs your muscle data to match the right workout'}
+              </p>
+            </div>
+
+            <Link href="/inbody" className="block w-full py-3.5 rounded-2xl text-white font-bold text-sm text-center transition-all active:scale-[0.98]"
+              style={{ background: 'linear-gradient(135deg, #0F9E75 0%, #0BD68A 100%)', boxShadow: '0 4px 14px rgba(15,158,117,0.35)' }}>
+              {lang === 'zh' ? '前往輸入數據 →' : 'Add Body Data →'}
+            </Link>
+          </div>
         </div>
       </div>
     )

@@ -181,19 +181,79 @@ export default function DashboardPage() {
 
 
 
-      {/* No InBody data */}
+      {/* No InBody data — Journey onboarding */}
       {!inbody && (
-        <div className="card-lg p-8 text-center space-y-5">
-          <div className="w-16 h-16 rounded-3xl bg-[#E8F5F0] flex items-center justify-center mx-auto">
-            <Zap size={28} className="text-[#0F9E75]" />
+        <div className="relative rounded-3xl overflow-hidden"
+          style={{ background: 'linear-gradient(145deg, #0f1f1a 0%, #111827 60%, #0a1628 100%)', border: '1px solid rgba(15,158,117,0.2)', boxShadow: '0 0 60px rgba(15,158,117,0.08)' }}>
+          {/* Glow */}
+          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-20 pointer-events-none"
+            style={{ background: 'radial-gradient(circle, #0BD68A 0%, transparent 70%)' }} />
+
+          <div className="relative p-7 space-y-6">
+            {/* Header */}
+            <div className="text-center">
+              <div className="inline-flex items-center gap-1.5 bg-[#0F9E75]/15 border border-[#0F9E75]/25 px-3 py-1 rounded-full mb-3">
+                <Zap size={11} className="text-[#0BD68A]" />
+                <span className="text-[11px] font-bold text-[#0BD68A] tracking-wide uppercase">
+                  {lang === 'zh' ? '開始你的旅程' : 'Start Your Journey'}
+                </span>
+              </div>
+              <p className="text-xl font-black text-white leading-tight">
+                {lang === 'zh' ? '3 步解鎖 AI 個人化' : '3 Steps to AI Personalisation'}
+              </p>
+              <p className="text-sm text-slate-400 mt-1">
+                {lang === 'zh' ? '根據你的身體數據，生成專屬餐單與訓練' : 'Meals & workouts tailored to your body data'}
+              </p>
+            </div>
+
+            {/* Steps */}
+            <div className="space-y-3">
+              {/* Step 1 — Active */}
+              <Link href="/inbody" className="flex items-center gap-4 rounded-2xl p-4 transition-all active:scale-[0.98]"
+                style={{ background: 'linear-gradient(135deg, rgba(15,158,117,0.2) 0%, rgba(11,214,138,0.08) 100%)', border: '1px solid rgba(15,158,117,0.35)' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white font-black text-base"
+                  style={{ background: 'linear-gradient(135deg, #0F9E75 0%, #0BD68A 100%)', boxShadow: '0 4px 12px rgba(15,158,117,0.4)' }}>
+                  1
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white">{lang === 'zh' ? '輸入身體數據' : 'Add Body Data'}</p>
+                  <p className="text-xs text-[#0BD68A]/80">{lang === 'zh' ? '體重、身高、體脂等' : 'Weight, height, body fat & more'}</p>
+                </div>
+                <div className="text-[#0BD68A] font-bold text-lg">→</div>
+              </Link>
+
+              {/* Step 2 — Locked */}
+              <div className="flex items-center gap-4 rounded-2xl p-4 opacity-45"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center shrink-0 text-slate-400 font-black text-base">
+                  2
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-300">{lang === 'zh' ? '生成 AI 餐單' : 'Generate AI Meal Plan'}</p>
+                  <p className="text-xs text-slate-500">{lang === 'zh' ? '早午晚三餐 × 每日更新' : 'Breakfast, lunch & dinner daily'}</p>
+                </div>
+                <div className="text-slate-600 text-base">🔒</div>
+              </div>
+
+              {/* Step 3 — Locked */}
+              <div className="flex items-center gap-4 rounded-2xl p-4 opacity-45"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center shrink-0 text-slate-400 font-black text-base">
+                  3
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-300">{lang === 'zh' ? '獲取訓練計劃' : 'Get Training Plan'}</p>
+                  <p className="text-xs text-slate-500">{lang === 'zh' ? 'AI 根據你的肌肉數據配對' : 'AI-matched to your muscle data'}</p>
+                </div>
+                <div className="text-slate-600 text-base">🔒</div>
+              </div>
+            </div>
+
+            <Link href="/inbody" className="block w-full py-4 rounded-2xl text-white font-black text-center text-sm transition-all active:scale-[0.98]"
+              style={{ background: 'linear-gradient(135deg, #0F9E75 0%, #0BD68A 100%)', boxShadow: '0 4px 16px rgba(15,158,117,0.35)' }}>
+              {lang === 'zh' ? '立即開始 →' : 'Get Started →'}
+            </Link>
           </div>
-          <div>
-            <p className="font-bold text-slate-800 dark:text-slate-200 text-lg mb-1">{t.dashboard.noDataTitle}</p>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">{t.dashboard.noDataDesc}</p>
-          </div>
-          <Link href="/inbody" className="btn-primary inline-flex px-8">
-            {t.btn.getStarted}
-          </Link>
         </div>
       )}
 
