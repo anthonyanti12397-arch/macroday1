@@ -5,7 +5,7 @@ import { signIn } from 'next-auth/react'
 import { saveGuestSession, saveLang } from '@/lib/storage'
 import type { GuestSession } from '@/lib/types'
 import Logo from './Logo'
-import { Mail, ArrowRight, Users, Chrome, ChevronLeft, RefreshCw } from 'lucide-react'
+import { Mail, ArrowRight, Users, Chrome, ChevronLeft, RefreshCw, Apple } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface LoginScreenProps {
@@ -300,13 +300,12 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         {step === 'landing' && (
           <>
             <button
-              onClick={() => { setStep('email'); setError('') }}
-              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:border-[#0F9E75] transition-all"
+              onClick={() => signIn('apple', { callbackUrl: '/' })}
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-black dark:bg-black text-white text-sm font-semibold hover:bg-slate-900 transition-all"
               style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
             >
-              <Mail size={18} className="text-slate-500 dark:text-slate-400" />
-              <span>{c.emailBtn}</span>
-              <ArrowRight size={15} className="ml-auto text-slate-400 dark:text-slate-500" />
+              <Apple size={18} />
+              <span>{lang === 'zh' ? '使用 Apple 登入' : 'Continue with Apple'}</span>
             </button>
 
             <button
@@ -316,6 +315,16 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             >
               <Chrome size={18} className="text-slate-500 dark:text-slate-400" />
               <span>{c.google}</span>
+            </button>
+
+            <button
+              onClick={() => { setStep('email'); setError('') }}
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:border-[#0F9E75] transition-all"
+              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
+            >
+              <Mail size={18} className="text-slate-500 dark:text-slate-400" />
+              <span>{c.emailBtn}</span>
+              <ArrowRight size={15} className="ml-auto text-slate-400 dark:text-slate-500" />
             </button>
 
             <div className="flex items-center gap-3 py-1">
