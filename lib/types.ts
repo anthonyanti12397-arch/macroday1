@@ -105,6 +105,15 @@ export interface GuestSession {
   createdAt: string
 }
 
+export interface CloudAppState {
+  trainingHistory: TrainingRecord[]
+  favorites: Meal[]
+  macroScore: number
+  unlockedParts: string[]
+  equippedLoadout: Record<string, string>
+  lang: 'en' | 'zh'
+}
+
 export interface MigrationPayload {
   inbodyHistory: InBodyRecord[]
   profile: UserProfile | null
@@ -112,6 +121,16 @@ export interface MigrationPayload {
   weeklyPlan: WeeklyPlan | null
   currentStreak: number
   promptVersion?: string
+  appState?: CloudAppState
+}
+
+export interface CloudSnapshot {
+  profile: UserProfile | null
+  inbodyHistory: InBodyRecord[]
+  dailyMeals: DailyMeals | null
+  weeklyPlan: WeeklyPlan | null
+  currentStreak: number
+  appState: CloudAppState
 }
 
 export interface PromptFeedbackInput {

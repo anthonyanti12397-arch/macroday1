@@ -14,6 +14,7 @@ model User {
   name                String?
   image               String?
   provider            String           @default("email-otp")
+  localState          Json?
   preferredCuisine    String?
   dietaryRestrictions Json?
   dislikedIngredients Json?
@@ -26,12 +27,27 @@ model User {
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
   lastLogin           DateTime         @default(now())
+  authAccounts        AuthAccount[]
   inbodyHistory       InBodyEntry[]
   mealPlans           MealPlan[]
   forumPosts          ForumPost[]
   forumReplies        ForumReply[]
   forumLikes          ForumLike[]
   promptFeedback      PromptFeedback[]
+}
+
+model AuthAccount {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  providerAccountId String
+  email             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model InBodyEntry {

@@ -340,7 +340,7 @@ export default function MealPlanPage() {
     }
   }
 
-  async function generateWeek() {
+  async function generateWeek(force = false) {
     const currentProfile = getUserProfile()
     if (!inbody || !currentProfile) return
     if (!canUseFeature('weekly-plan', { isPro: currentProfile.isPro })) { setShowUpgrade(true); return }
@@ -349,10 +349,11 @@ export default function MealPlanPage() {
     
     // Check cache first
     const mem = getMemoryCache<WeeklyPlan>(cacheHash + '_weekly')
-    if (mem) { setPlan(mem); return }
+    if (mem && !force) { setPlan(mem); return }
     
     const statsCached = getFromStatsCache<WeeklyPlan>(cacheHash + '_weekly')
-    if (statsCached) {
+    if (statsCached && !force) {
+      saveWeeklyPlan(statsCached)
       setPlan(statsCached)
       setMemoryCache(cacheHash + '_weekly', statsCached)
       return
@@ -374,6 +375,7 @@ export default function MealPlanPage() {
     }).then(async res => {
       const data = await res.json() as WeeklyPlan | { error: string }
       if ('error' in data) throw new Error(data.error)
+      saveWeeklyPlan(data)
       saveToStatsCache(cacheHash + '_weekly', data)
       setMemoryCache(cacheHash + '_weekly', data)
       setPlan(data)
@@ -456,7 +458,7 @@ export default function MealPlanPage() {
   }
 
   const loading = tab === 'today' ? loadingToday : loadingWeek
-  const handleGenerate = tab === 'today' ? () => generateToday(!!dailyMeals) : generateWeek
+  const handleGenerate = tab === 'today' ? () => generateToday(!!dailyMeals) : () => generateWeek(!!plan)
   const showGenerateBtn = tab !== 'saved'
 
   return (
