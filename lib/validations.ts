@@ -12,7 +12,7 @@ export const InBodySchema = z.object({
 })
 
 export const UserProfileSchema = z.object({
-  goal: z.enum(['fat_loss', 'maintenance', 'muscle_gain']),
+  goal: z.enum(['fat_loss', 'maintain', 'maintenance', 'muscle_gain']),
   activityLevel: z.enum(['sedentary', 'light', 'moderate', 'active', 'very_active']),
   dietaryRestrictions: z.array(z.string()),
   dislikedIngredients: z.array(z.string()).optional(),
