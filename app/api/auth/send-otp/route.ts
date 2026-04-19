@@ -35,8 +35,12 @@ export async function POST(req: NextRequest) {
     const otp   = generateOTP()
     const token = signOTPToken(normalizedEmail, otp)
 
+    // Ensure from address has proper format for Resend
+    const fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev'
+    const from = fromEmail.includes('<') ? fromEmail : `MacroDay <${fromEmail}>`
+
     const { error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM ?? 'MacroDay <noreply@macroday.app>',
+      from,
       to:   normalizedEmail,
       subject: `${otp} — MacroDay 登入驗證碼`,
       html: `<!DOCTYPE html>
