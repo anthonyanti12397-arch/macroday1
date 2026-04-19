@@ -43,8 +43,12 @@ export default function UpgradeSuccessPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId }),
       })
-        .then(() => update()) // Force JWT refresh so session reflects new isPro/isAdFree
-        .then(() => setConfirmed(true))
+        .then(async (res) => {
+          if (res.ok) {
+            await update() // Force JWT refresh so isPro shows immediately
+          }
+          setConfirmed(true)
+        })
         .catch(() => setConfirmed(true))
     } else {
       setConfirmed(true)
