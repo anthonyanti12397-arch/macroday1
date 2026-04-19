@@ -12,6 +12,7 @@ declare module 'next-auth' {
       createdAt: string
       lastLogin: string
       isPro: boolean
+      isAdFree: boolean
     }
   }
 
@@ -21,6 +22,7 @@ declare module 'next-auth' {
     email?: string | null
     image?: string | null
     isPro?: boolean
+    isAdFree?: boolean
   }
 }
 
@@ -31,5 +33,6 @@ declare module 'next-auth/jwt' {
     createdAt: string
     lastLogin: string
     isPro?: boolean
+    isAdFree?: boolean
   }
 }

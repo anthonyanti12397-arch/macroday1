@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import confetti from 'canvas-confetti'
 import { saveUserProfile, getUserProfile } from '@/lib/storage'
 import { CheckCircle, ArrowRight } from 'lucide-react'
@@ -10,6 +11,7 @@ import { motion } from 'framer-motion'
 export default function UpgradeSuccessPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { update } = useSession()
   const [confirmed, setConfirmed] = useState(false)
 
   useEffect(() => {
@@ -41,6 +43,7 @@ export default function UpgradeSuccessPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId }),
       })
+        .then(() => update()) // Force JWT refresh so session reflects new isPro/isAdFree
         .then(() => setConfirmed(true))
         .catch(() => setConfirmed(true))
     } else {

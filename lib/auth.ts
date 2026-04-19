@@ -3,7 +3,7 @@ import GoogleProvider from 'next-auth/providers/google'
 import AppleProvider from 'next-auth/providers/apple'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { verifyOTPToken } from '@/lib/otp'
-import { getUserByEmail, upsertUser } from '@/lib/db'
+import { getUserByEmail, getUserById, upsertUser } from '@/lib/db'
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -52,7 +52,16 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt' },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user, account, profile, trigger }) {
+      if (trigger === 'update' && token.id) {
+        // Re-fetch from DB to pick up Pro/AdFree changes after payment
+        const dbUser = await getUserById(token.id as string)
+        if (dbUser) {
+          token.isPro = dbUser.isPro
+          token.isAdFree = dbUser.isAdFree
+        }
+        return token
+      }
       if (user?.email) {
         const dbUser = await upsertUser({
           email: user.email,
@@ -66,6 +75,7 @@ export const authOptions: NextAuthOptions = {
         token.createdAt = (token.createdAt as string) ?? dbUser.createdAt.toISOString()
         token.lastLogin = new Date().toISOString()
         token.isPro = dbUser.isPro
+        token.isAdFree = dbUser.isAdFree
       }
       return token
     },
@@ -76,6 +86,7 @@ export const authOptions: NextAuthOptions = {
         session.user.createdAt = token.createdAt as string
         session.user.lastLogin = token.lastLogin as string
         session.user.isPro = Boolean(token.isPro)
+        session.user.isAdFree = Boolean(token.isAdFree)
       }
       return session
     },
