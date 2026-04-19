@@ -11,10 +11,9 @@ import { hydrateInBodyRecord, normalizeUserProfile, formatArrayAsString } from '
 import { ZodError } from 'zod'
 
 function getClient() {
-  return new OpenAI({
-    apiKey: process.env.XAI_API_KEY ?? 'placeholder',
-    baseURL: 'https://api.x.ai/v1',
-  })
+  const apiKey = process.env.XAI_API_KEY
+  if (!apiKey) throw new Error('AI service is not configured. Please contact support.')
+  return new OpenAI({ apiKey, baseURL: 'https://api.x.ai/v1' })
 }
 
 // Mifflin-St Jeor BMR estimate when InBody BMR is not available
@@ -203,6 +202,11 @@ Return ONLY a JSON object with this exact structure:
     return NextResponse.json(weeklyPlan)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    // Surface quota / auth errors from x.ai clearly
+    const status =
+      message.includes('401') || message.includes('403') ? 503
+      : message.includes('429') ? 429
+      : 500
+    return NextResponse.json({ error: message }, { status })
   }
 }

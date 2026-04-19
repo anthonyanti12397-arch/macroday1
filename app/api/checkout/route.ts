@@ -78,17 +78,18 @@ export async function POST(req: Request) {
       }
     }
 
+    const subscriptionData: Record<string, unknown> = {
+      metadata: { userId: effectiveUserId, mode },
+    }
+    if (mode !== 'adfree' && PRO_TRIAL_DAYS > 0) {
+      subscriptionData.trial_period_days = PRO_TRIAL_DAYS
+    }
+
     const checkout = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [lineItem],
       mode: 'subscription',
-      subscription_data: {
-        trial_period_days: mode === 'adfree' ? 0 : PRO_TRIAL_DAYS,
-        metadata: {
-          userId: effectiveUserId,
-          mode,
-        },
-      },
+      subscription_data: subscriptionData,
       success_url: `${baseUrl}/upgrade/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing`,
       metadata: {
