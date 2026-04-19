@@ -1,6 +1,6 @@
 'use client'
 
-import type { InBodyRecord, UserProfile, WeeklyPlan, UsageRecord, DailyMeals, GuestSession, TrainingRecord } from './types'
+import type { CloudAppState, CloudSnapshot, InBodyRecord, UserProfile, WeeklyPlan, UsageRecord, DailyMeals, GuestSession, TrainingRecord } from './types'
 
 const KEYS = {
   INBODY_HISTORY: 'fuelweek_inbody_history',
@@ -52,6 +52,14 @@ export function getInBodyHistory(): InBodyRecord[] {
   }
 }
 
+export function replaceInBodyHistory(records: InBodyRecord[]): void {
+  try {
+    localStorage.setItem(KEYS.INBODY_HISTORY, JSON.stringify(records))
+  } catch {
+    // SSR or storage unavailable
+  }
+}
+
 export function getLatestInBody(): InBodyRecord | null {
   try {
     const history = getInBodyHistory()
@@ -82,6 +90,15 @@ export function getUserProfile(): UserProfile | null {
   }
 }
 
+export function replaceUserProfile(profile: UserProfile | null): void {
+  try {
+    if (profile) localStorage.setItem(KEYS.USER_PROFILE, JSON.stringify(profile))
+    else localStorage.removeItem(KEYS.USER_PROFILE)
+  } catch {
+    // SSR or storage unavailable
+  }
+}
+
 export function addDislikedIngredients(ingredients: string[]): UserProfile | null {
   const profile = getUserProfile()
   if (!profile) return null
@@ -108,6 +125,15 @@ export function getLatestWeeklyPlan(): WeeklyPlan | null {
     return JSON.parse(raw) as WeeklyPlan
   } catch {
     return null
+  }
+}
+
+export function replaceWeeklyPlan(plan: WeeklyPlan | null): void {
+  try {
+    if (plan) localStorage.setItem(KEYS.WEEKLY_PLAN, JSON.stringify(plan))
+    else localStorage.removeItem(KEYS.WEEKLY_PLAN)
+  } catch {
+    // SSR or storage unavailable
   }
 }
 
@@ -177,6 +203,14 @@ export function getShoppingChecked(): Record<string, boolean> {
   }
 }
 
+export function replaceShoppingChecked(checked: Record<string, boolean>): void {
+  try {
+    localStorage.setItem(KEYS.SHOPPING_CHECKED, JSON.stringify(checked))
+  } catch {
+    // SSR or storage unavailable
+  }
+}
+
 // ── Daily Meals ───────────────────────────────────────────────────────────────
 // Cached per-day so we don't re-generate on every visit
 
@@ -198,6 +232,15 @@ export function getTodayDailyMeals(): DailyMeals | null {
     return meals
   } catch {
     return null
+  }
+}
+
+export function replaceDailyMeals(meals: DailyMeals | null): void {
+  try {
+    if (meals) localStorage.setItem(KEYS.DAILY_MEALS, JSON.stringify(meals))
+    else localStorage.removeItem(KEYS.DAILY_MEALS)
+  } catch {
+    // SSR or storage unavailable
   }
 }
 
@@ -365,6 +408,14 @@ export function getFavorites(): import('./types').Meal[] {
   }
 }
 
+export function replaceFavorites(favorites: import('./types').Meal[]): void {
+  try {
+    localStorage.setItem('macroday_favorites', JSON.stringify(favorites))
+  } catch {
+    // SSR
+  }
+}
+
 export function toggleFavorite(meal: import('./types').Meal): boolean {
   try {
     const favs = getFavorites()
@@ -399,6 +450,30 @@ export function saveLang(lang: 'en' | 'zh'): void {
   } catch {
     // SSR or storage unavailable
   }
+}
+
+export function getCloudAppState(): CloudAppState {
+  return {
+    trainingHistory: getTrainingHistory(),
+    favorites: getFavorites(),
+    macroScore: getMacroScore(),
+    unlockedParts: getUnlockedParts(),
+    equippedLoadout: getEquippedLoadout(),
+    lang: getLang(),
+  }
+}
+
+export function applyCloudSnapshot(snapshot: CloudSnapshot): void {
+  replaceInBodyHistory(snapshot.inbodyHistory)
+  replaceUserProfile(snapshot.profile)
+  replaceDailyMeals(snapshot.dailyMeals)
+  replaceWeeklyPlan(snapshot.weeklyPlan)
+  replaceTrainingHistory(snapshot.appState.trainingHistory)
+  replaceFavorites(snapshot.appState.favorites)
+  setMacroScore(snapshot.appState.macroScore)
+  replaceUnlockedParts(snapshot.appState.unlockedParts)
+  setEquippedLoadout(snapshot.appState.equippedLoadout)
+  saveLang(snapshot.appState.lang)
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -440,6 +515,14 @@ export function saveTrainingRecord(record: TrainingRecord): void {
   }
 }
 
+export function replaceTrainingHistory(records: TrainingRecord[]): void {
+  try {
+    localStorage.setItem('fuelweek_training_history', JSON.stringify(records))
+  } catch {
+    // SSR or storage unavailable
+  }
+}
+
 // ── Avatar & MacroScore ───────────────────────────────────────────────────────
 
 export function getMacroScore(): number {
@@ -456,6 +539,14 @@ export function addMacroScore(points: number): void {
   try {
     const current = getMacroScore()
     localStorage.setItem('macroday_score', (current + points).toString())
+  } catch {
+    // SSR
+  }
+}
+
+export function setMacroScore(points: number): void {
+  try {
+    localStorage.setItem('macroday_score', String(Math.max(0, points)))
   } catch {
     // SSR
   }
@@ -489,6 +580,14 @@ export function unlockPart(id: string): void {
       current.push(id)
       localStorage.setItem('macroday_unlocked_parts', JSON.stringify(current))
     }
+  } catch {
+    // SSR
+  }
+}
+
+export function replaceUnlockedParts(ids: string[]): void {
+  try {
+    localStorage.setItem('macroday_unlocked_parts', JSON.stringify(ids))
   } catch {
     // SSR
   }

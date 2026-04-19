@@ -1,5 +1,6 @@
 import type { MigrationPayload } from '@/lib/types'
 import {
+  getCloudAppState,
   getComplianceHistory,
   getInBodyHistory,
   getLatestWeeklyPlan,
@@ -19,6 +20,7 @@ export function buildMigrationPayload(): MigrationPayload {
     weeklyPlan: getLatestWeeklyPlan(),
     currentStreak: getStreakData().current,
     promptVersion: PROMPT_VERSION,
+    appState: getCloudAppState(),
   }
 }
 

@@ -3,7 +3,7 @@ import GoogleProvider from 'next-auth/providers/google'
 import AppleProvider from 'next-auth/providers/apple'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { verifyOTPToken } from '@/lib/otp'
-import { getUserByEmail, getUserById, upsertUser } from '@/lib/db'
+import { getUserByEmail, getUserById, resolveOAuthUser, upsertUser } from '@/lib/db'
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -62,16 +62,44 @@ export const authOptions: NextAuthOptions = {
         }
         return token
       }
-      if (user?.email) {
-        const dbUser = await upsertUser({
-          email: user.email,
-          name: user.name ?? (profile as { name?: string })?.name ?? null,
-          image: user.image ?? (profile as { picture?: string })?.picture ?? null,
-          provider: account?.provider ?? 'email-otp',
-        })
+      const provider = account?.provider ?? 'email-otp'
+      const email =
+        user?.email?.toLowerCase().trim() ??
+        token.email?.toLowerCase().trim() ??
+        (profile as { email?: string })?.email?.toLowerCase().trim() ??
+        null
+      const name = user?.name ?? token.name ?? (profile as { name?: string })?.name ?? null
+      const image =
+        user?.image ??
+        (token.picture as string | undefined) ??
+        (profile as { picture?: string })?.picture ??
+        null
 
+      let dbUser = null
+
+      if (provider !== 'email-otp' && account?.providerAccountId) {
+        dbUser = await resolveOAuthUser({
+          provider,
+          providerAccountId: account.providerAccountId,
+          email,
+          name,
+          image,
+        })
+      } else if (email) {
+        dbUser = await upsertUser({
+          email,
+          name,
+          image,
+          provider,
+        })
+      }
+
+      if (dbUser) {
         token.id = dbUser.id
-        token.provider = account?.provider ?? 'email-otp'
+        token.email = dbUser.email ?? email ?? undefined
+        token.name = dbUser.name ?? token.name
+        token.picture = dbUser.image ?? token.picture
+        token.provider = provider
         token.createdAt = (token.createdAt as string) ?? dbUser.createdAt.toISOString()
         token.lastLogin = new Date().toISOString()
         token.isPro = dbUser.isPro

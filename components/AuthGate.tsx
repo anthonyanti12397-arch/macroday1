@@ -6,10 +6,11 @@ import { useGuestSession } from '@/hooks/useGuestSession'
 import LoginScreen from './LoginScreen'
 import LoadingScreen from './LoadingScreen'
 import {
+  applyCloudSnapshot,
   getUserProfile, saveUserProfile,
-  getInBodyHistory, getLatestWeeklyPlan, getTodayDailyMeals,
   hasCompletedMigration, markMigrationComplete,
 } from '@/lib/storage'
+import { buildMigrationPayload } from '@/lib/migration'
 
 function AuthGateInner({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
@@ -39,32 +40,42 @@ function AuthGateInner({ children }: { children: React.ReactNode }) {
     }
     hasSynced.current = true
 
-    const inbodyHistory = getInBodyHistory()
-    const profile = getUserProfile()
-    const weeklyPlan = getLatestWeeklyPlan()
-    const dailyMeals = getTodayDailyMeals()
+    const payload = buildMigrationPayload()
+    const hasLocalData =
+      payload.inbodyHistory.length > 0 ||
+      !!payload.profile ||
+      !!payload.weeklyPlan ||
+      !!payload.dailyMeals ||
+      (payload.appState?.trainingHistory.length ?? 0) > 0 ||
+      (payload.appState?.favorites.length ?? 0) > 0 ||
+      (payload.appState?.macroScore ?? 0) > 0
 
-    // Only sync if there's local data worth saving
-    if (inbodyHistory.length > 0 || profile || weeklyPlan || dailyMeals) {
+    if (hasLocalData) {
       fetch('/api/user/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          inbodyHistory,
-          profile,
-          weeklyPlan,
-          dailyMeals,
-          currentStreak: 0,
-        }),
+        body: JSON.stringify(payload),
       })
-        .then(() => markMigrationComplete())
+        .then(async (res) => {
+          if (!res.ok) throw new Error('Cloud sync failed')
+          markMigrationComplete()
+          if (isGuest) logoutGuest()
+        })
         .catch(() => {}) // silent — will retry next login
-    } else {
-      markMigrationComplete()
+      return
     }
 
-    // Clear guest session now that we have a real account
-    if (isGuest) logoutGuest()
+    fetch('/api/user/sync')
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Cloud restore failed')
+        return res.json()
+      })
+      .then((snapshot) => {
+        if (snapshot) applyCloudSnapshot(snapshot)
+        markMigrationComplete()
+        if (isGuest) logoutGuest()
+      })
+      .catch(() => {}) // silent — will retry next login
   }, [status, isGuest, logoutGuest])
 
   // 1. Wait for hydration (reading localStorage) and NextAuth status

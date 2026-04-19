@@ -774,3 +774,140 @@ interface AvatarProps {
 3. **重寫 ComplianceCalendar**: 解決「不像樣」的日曆問題。
 4. **開發 Plan 005**: 專業月份日曆 + 個人成長藍圖 (/roadmap) 頁面。
 5. **初始化數據庫表**: 為雲端同步做準備 (Prisma Push)。
+
+---
+
+## 15. [Auth & Restore] 2026-04-19 — 帳戶綁定與跨裝置恢復補強
+
+本次更新重點處理兩個核心問題：
+
+1. **登入後是否真的建立帳戶**
+2. **用戶換裝置後能否恢復原本資料**
+
+### A. 真正的 OAuth 帳戶綁定
+
+過去的 `NextAuth` 流程主要依賴 `email` 去 `upsert User`，這對 Google 大多可行，但對 Apple 不穩定：
+
+- Apple 可能只在第一次授權時返回 email
+- 後續登入若拿不到 email，原流程就可能無法穩定對回同一個 user
+- 結果會出現「看起來登入成功，但不確定有沒有 create account」的狀況
+
+**本次修復：**
+
+- 在 Prisma schema 新增 `AuthAccount` model
+- 以 `(provider, providerAccountId)` 作為 OAuth 真正身份主鍵
+- `lib/auth.ts` 的 JWT callback 改為：
+  - OAuth provider（Google / Apple）優先走 `resolveOAuthUser()`
+  - 先查 `AuthAccount`
+  - 若已綁定，直接回同一個 `User`
+  - 若未綁定，再嘗試用 email merge 既有帳戶
+  - 最後建立 `AuthAccount` link
+
+**涉及檔案：**
+
+- `prisma/schema.prisma`
+- `lib/db.ts`
+- `lib/auth.ts`
+
+這代表未來 Apple 登入不再只靠 email 猜帳號，而是有穩定的 provider-account linking。
+
+### B. 補上「登入後從雲端拉回本機」的 restore 流程
+
+先前系統其實只有：
+
+- 本地資料 → `/api/user/sync` → 雲端
+
+但缺少反方向：
+
+- 雲端資料 → 新裝置本機 `localStorage`
+
+所以實際上會出現：
+
+- 舊裝置登入後資料已上傳
+- 新裝置也能登入同一帳戶
+- 但頁面仍然像「沒資料」，因為本機沒有 hydrate cloud snapshot
+
+**本次修復：**
+
+- `app/api/user/sync/route.ts`
+  - 新增 `GET /api/user/sync`
+  - 讀取目前登入 user 的 cloud snapshot
+- `components/AuthGate.tsx`
+  - 登入後若本機已有資料，優先上傳
+  - 若本機是空白，則自動呼叫 `GET /api/user/sync`
+  - 回傳 snapshot 後寫回 `localStorage`
+- `lib/storage.ts`
+  - 新增一批 `replace*` / `applyCloudSnapshot()` helper
+  - 用於將雲端資料完整覆蓋回本機
+
+### C. 雲端快照目前覆蓋範圍
+
+本次 restore 不只處理 `User`、`InBody`、`MealPlan`，也把原本完全 local-only 的狀態納入：
+
+- `InBodyHistory`
+- `UserProfile`
+- `DailyMeals`
+- `WeeklyPlan`
+- `TrainingHistory`
+- `Favorites`
+- `MacroScore`
+- `Unlocked avatar parts`
+- `Equipped loadout`
+- `Lang`
+
+為了保存這些 local-first 狀態，本次在 `User` model 新增：
+
+- `localState Json?`
+
+其用途是將本來沒有正規 relation table 的 client 狀態先集中保存，方便 restore。
+
+### D. Weekly Plan 相關順手修復
+
+在檢查「week menu 出不了餐單」時，另外發現兩個 UX / state 問題並已修正：
+
+- weekly plan 生成成功後，沒有寫回 `localStorage`
+- week tab 的 regenerate 常常被 cache 短路，看起來像按了沒反應
+
+已在 `app/meal-plan/page.tsx` 修正：
+
+- 生成成功後 `saveWeeklyPlan(data)`
+- regenerate 時可強制繞過快取
+
+### E. 目前仍需手動完成的部署步驟
+
+雖然代碼已完成，但要在線上真正生效，還需要：
+
+1. **更新資料庫 schema**
+   - 需要對 production DB 套用 Prisma schema 變更
+   - 因為新增了：
+     - `User.localState`
+     - `AuthAccount`
+
+2. **驗證 Vercel env vars**
+   - `NEXTAUTH_SECRET`
+   - `DATABASE_URL`
+   - `DIRECT_URL`
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+   - `APPLE_CLIENT_ID`
+   - `APPLE_CLIENT_SECRET`
+   - `RESEND_API_KEY`
+
+3. **真機 / production flow 驗證**
+   - Apple 第一次登入
+   - Apple 第二次登入（測試 providerAccountId 綁定是否穩）
+   - Google 登入後新裝置 restore
+   - Email OTP 是否能送達與建立帳戶
+
+### F. 驗證結果
+
+本次修改後已執行：
+
+- `npx prisma generate`
+- `npm run build`
+
+結果：
+
+- build 通過
+- Prisma client 已更新
+- 僅保留既有 lint warning：`app/upgrade/success/page.tsx` 的 `useEffect` dependency 提示

@@ -55,7 +55,7 @@ export default function UpgradeSuccessPage() {
     }
 
     return () => clearInterval(interval)
-  }, [searchParams])
+  }, [searchParams, update])
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6 bg-white/50 backdrop-blur-sm rounded-3xl mt-10">
