@@ -86,8 +86,11 @@ export async function POST(req: NextRequest) {
     })
 
     if (error) {
-      console.error('Resend error:', error)
-      return NextResponse.json({ error: 'Failed to send email' }, { status: 500 })
+      console.error('Resend error:', JSON.stringify(error, null, 2))
+      console.error('Resend error message:', error.message)
+      console.error('Email from:', from)
+      console.error('Email to:', normalizedEmail)
+      return NextResponse.json({ error: 'Failed to send email', details: error.message }, { status: 500 })
     }
 
     // Return the signed token — client stores it and passes it back during verify
