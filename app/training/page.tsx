@@ -7,7 +7,6 @@ import { useLang } from '@/contexts/LangContext'
 import { CheckCircle, Activity, Loader2, Dumbbell, Flame, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import CheckInCamera from '@/components/CheckInCamera'
 
 const FOCUS_AREAS = [
   { id: 'upper', zh: '上肢推 (胸/肩/三頭)', en: 'Upper Body (Push)' },
@@ -27,7 +26,6 @@ export default function TrainingPage() {
   const [focusArea, setFocusArea] = useState('full')
   const [isGenerating, setIsGenerating] = useState(false)
   const [loadingText, setLoadingText] = useState('')
-  const [checkinOpen, setCheckinOpen] = useState(false)
   const [diversity, setDiversity] = useState(0.5)
 
   useEffect(() => {
@@ -114,10 +112,6 @@ export default function TrainingPage() {
     } finally {
       setIsGenerating(false)
     }
-  }
-
-  function handleComplete() {
-    setCheckinOpen(true)
   }
 
   function executeComplete() {
@@ -273,9 +267,9 @@ export default function TrainingPage() {
 
             <div className="flex gap-3 mt-6">
               <button
-                onClick={handleComplete}
+                onClick={executeComplete}
                 className="flex-1 btn-primary !text-lg !h-14 shadow-lg shadow-[#0F9E75]/30">
-                📸 {lang === 'zh' ? '拍照打卡得分' : 'Photo Check-in'}
+                ✓ {lang === 'zh' ? '完成訓練' : 'Complete Workout'}
               </button>
               <button
                 onClick={() => handleGenerate(true)}
@@ -286,16 +280,6 @@ export default function TrainingPage() {
               </button>
             </div>
             
-            {checkinOpen && (
-              <CheckInCamera
-                checkInType="training"
-                onVerified={() => {
-                  setCheckinOpen(false)
-                  executeComplete()
-                }}
-                onClose={() => setCheckinOpen(false)}
-              />
-            )}
           </div>
         </div>
       ) : (

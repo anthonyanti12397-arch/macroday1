@@ -2,7 +2,6 @@
 
 import { useEffect, useState, lazy, Suspense } from 'react'
 const CookMode = lazy(() => import('./CookMode'))
-import CheckInCamera from './CheckInCamera'
 import type { Meal } from '@/lib/types'
 import { ChevronDown, ChevronUp, Clock, Heart, CheckCircle2, ShoppingBag, UtensilsCrossed, RefreshCw } from 'lucide-react'
 import Image from 'next/image'
@@ -30,7 +29,6 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
   const [eaten, setEaten] = useState(false)
   const [fav, setFav] = useState(false)
   const [cookMode, setCookMode] = useState(false)
-  const [checkinOpen, setCheckinOpen] = useState(false)
 
   useEffect(() => {
     if (mealKey) setEaten(getEatenMeals().includes(mealKey))
@@ -40,32 +38,15 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
   function handleEatenClick(e: React.MouseEvent) {
     e.stopPropagation()
     if (!mealKey) return
-    
-    if (eaten) {
-      // If already eaten, just unmark it freely
-      if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(10);
-      const updated = toggleMealEaten(mealKey)
-      setEaten(updated.includes(mealKey))
-      return
-    }
-    
-    // Require checkin to mark as eaten
-    setCheckinOpen(true)
-  }
-
-  function handleVerified() {
-    setCheckinOpen(false)
-    if (!mealKey) return
-    if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(10);
+    if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(10)
     const updated = toggleMealEaten(mealKey)
     const isNowEaten = updated.includes(mealKey)
     setEaten(isNowEaten)
-    
     if (isNowEaten && updated.length === 3) {
       addMacroScore(10)
       toast.success(lang === 'zh' ? '🏆 +10 分！三餐全制霸' : '🏆 +10 pts! All meals complete')
-    } else {
-      toast.success(lang === 'zh' ? '✨ 打卡成功' : '✨ Check-in verified')
+    } else if (isNowEaten) {
+      toast.success(lang === 'zh' ? '✅ 已記錄' : '✅ Marked as eaten')
     }
   }
 
@@ -307,14 +288,6 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
         </Suspense>
       )}
       
-      {checkinOpen && (
-        <CheckInCamera
-          checkInType="meal"
-          mealName={meal.name}
-          onVerified={handleVerified}
-          onClose={() => setCheckinOpen(false)}
-        />
-      )}
     </motion.div>
   )
 }
