@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { Check, Sparkles, MessageSquare, Cloud, ChefHat } from 'lucide-react'
-import { useSession } from 'next-auth/react'
+import { useSession, signIn } from 'next-auth/react'
 import { PRO_PRICE_MONTHLY, PRO_TRIAL_DAYS } from '@/lib/constants'
+import { toast } from 'sonner'
 
 const FEATURES = [
   'Unlimited AI meal swaps and weekly plans',
@@ -18,17 +19,38 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(false)
 
   async function handleUpgrade() {
+    // 檢查是否已登入
+    if (!session?.user?.id) {
+      toast.info('Please log in first')
+      await signIn()
+      return
+    }
+
     setLoading(true)
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: session?.user?.id, mode: 'pro' }),
+        body: JSON.stringify({ mode: 'pro' }),
       })
       const data = await res.json()
+
+      // 如果收到 requiresAuth，重新導向到登入
+      if (res.status === 401 && data.requiresAuth) {
+        toast.info('Please log in first')
+        await signIn()
+        setLoading(false)
+        return
+      }
+
       if (data.url) {
         window.location.href = data.url
+      } else {
+        toast.error(data.error || 'Checkout failed')
       }
+    } catch (err) {
+      console.error('[Pricing] Checkout error:', err)
+      toast.error('Payment redirect failed. Please try again.')
     } finally {
       setLoading(false)
     }

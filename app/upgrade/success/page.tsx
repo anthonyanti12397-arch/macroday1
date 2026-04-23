@@ -44,13 +44,22 @@ export default function UpgradeSuccessPage() {
         body: JSON.stringify({ sessionId }),
       })
         .then(async (res) => {
+          console.log('[UpgradeSuccess] Confirmation response:', res.status, res.statusText)
           if (res.ok) {
+            console.log('[UpgradeSuccess] Payment confirmed, updating session...')
             await update() // Force JWT refresh so isPro shows immediately
+          } else {
+            const error = await res.json()
+            console.error('[UpgradeSuccess] Confirmation failed:', error)
           }
           setConfirmed(true)
         })
-        .catch(() => setConfirmed(true))
+        .catch((err) => {
+          console.error('[UpgradeSuccess] Fetch error:', err)
+          setConfirmed(true)
+        })
     } else {
+      console.warn('[UpgradeSuccess] No session_id in URL')
       setConfirmed(true)
     }
 

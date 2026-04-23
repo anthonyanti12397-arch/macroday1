@@ -56,21 +56,31 @@ export async function POST(req: Request) {
     }
 
     if (!userId) {
+      console.error('[Checkout Confirm] Could not identify user for session:', {
+        sessionId,
+        metaUserId: checkout.metadata?.userId,
+        sessionUserId: session?.user?.id,
+        paymentStatus: checkout.payment_status,
+      })
       return NextResponse.json({ error: 'Could not identify user' }, { status: 401 })
     }
 
     if (isAdFree) {
-      await setUserAdFreeStatus(userId, true)
+      const result = await setUserAdFreeStatus(userId, true)
+      console.log('[Checkout Confirm] Ad-Free upgrade successful', { userId, mode })
       return NextResponse.json({ ok: true, isAdFree: true })
     } else {
       const subscription = checkout.subscription as Stripe.Subscription | null
       const trialEnd =
         subscription?.trial_end != null ? new Date(subscription.trial_end * 1000) : null
-      await setUserProStatus(userId, true, trialEnd)
+      const result = await setUserProStatus(userId, true, trialEnd)
+      console.log('[Checkout Confirm] Pro upgrade successful', { userId, mode, trialEnd })
       return NextResponse.json({ ok: true, isPro: true })
     }
   } catch (error) {
-    console.error('checkout confirm error', error)
+    console.error('[Checkout Confirm] Error:', error instanceof Error ? error.message : String(error), {
+      sessionId: (error as any)?.sessionId,
+    })
     return NextResponse.json({ error: 'Failed to confirm checkout' }, { status: 500 })
   }
 }

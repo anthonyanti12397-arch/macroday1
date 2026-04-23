@@ -5,6 +5,7 @@ import { useLang } from '@/contexts/LangContext'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useSession, signIn } from 'next-auth/react'
 import { PRO_TRIAL_DAYS } from '@/lib/constants'
 
 interface UpgradePromptProps {
@@ -14,10 +15,18 @@ interface UpgradePromptProps {
 
 export default function UpgradePrompt({ onClose, onUpgrade }: UpgradePromptProps) {
   const { lang, t } = useLang()
+  const { data: session } = useSession()
   const u = t.upgrade
   const [loading, setLoading] = useState(false)
 
   async function handleUpgrade(mode: 'pro' | 'adfree' = 'pro') {
+    // 檢查是否已登入
+    if (!session?.user?.id) {
+      toast.info(lang === 'zh' ? '請先登入您的帳戶' : 'Please log in first')
+      await signIn()
+      return
+    }
+
     setLoading(true)
     try {
       const res = await fetch('/api/checkout', {
@@ -26,12 +35,22 @@ export default function UpgradePrompt({ onClose, onUpgrade }: UpgradePromptProps
         body: JSON.stringify({ mode })
       })
       const data = await res.json()
+
+      // 如果收到 requiresAuth，重新導向到登入
+      if (res.status === 401 && data.requiresAuth) {
+        toast.info(lang === 'zh' ? '請先登入您的帳戶' : 'Please log in first')
+        await signIn()
+        setLoading(false)
+        return
+      }
+
       if (data.url) {
         window.location.href = data.url
       } else {
-        throw new Error('Checkout failed')
+        throw new Error(data.error || 'Checkout failed')
       }
     } catch (err) {
+      console.error('[UpgradePrompt] Error:', err)
       toast.error(lang === 'zh' ? '支付跳轉失敗，請稍後再試' : 'Payment redirect failed. Please try again.')
       setLoading(false)
     }

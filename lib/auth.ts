@@ -5,16 +5,25 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { verifyOTPToken } from '@/lib/otp'
 import { getUserByEmail, getUserById, resolveOAuthUser, upsertUser } from '@/lib/db'
 
+// Validate OAuth environment variables
+const hasAppleOAuth = process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET
+if (!hasAppleOAuth) {
+  console.warn(
+    '[NextAuth] Apple OAuth not configured. Set APPLE_CLIENT_ID and APPLE_CLIENT_SECRET to enable Apple login.',
+    { hasId: !!process.env.APPLE_CLIENT_ID, hasSecret: !!process.env.APPLE_CLIENT_SECRET }
+  )
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    ...(process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET
+    ...(hasAppleOAuth
       ? [AppleProvider({
-          clientId: process.env.APPLE_CLIENT_ID,
-          clientSecret: process.env.APPLE_CLIENT_SECRET,
+          clientId: process.env.APPLE_CLIENT_ID!,
+          clientSecret: process.env.APPLE_CLIENT_SECRET!,
         })]
       : []),
     CredentialsProvider({
@@ -26,25 +35,48 @@ export const authOptions: NextAuthOptions = {
         token: { label: 'Token', type: 'text' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.otp || !credentials?.token) return null
-        const valid = verifyOTPToken(credentials.token, credentials.email, credentials.otp)
-        if (!valid) return null
-        const email = credentials.email.toLowerCase().trim()
-        const dbUser =
-          (await getUserByEmail(email)) ??
-          (await upsertUser({
-            email,
-            name: email.split('@')[0],
-            image: null,
-            provider: 'email-otp',
-          }))
+        try {
+          if (!credentials?.email || !credentials?.otp || !credentials?.token) {
+            console.warn('[EmailOTP] Missing credentials', {
+              hasEmail: !!credentials?.email,
+              hasOtp: !!credentials?.otp,
+              hasToken: !!credentials?.token,
+            })
+            return null
+          }
 
-        return {
-          id: dbUser.id,
-          email,
-          name: dbUser.name ?? email.split('@')[0],
-          image: dbUser.image,
-          isPro: dbUser.isPro,
+          const valid = verifyOTPToken(credentials.token, credentials.email, credentials.otp)
+          if (!valid) {
+            console.warn('[EmailOTP] Invalid OTP token/code for email:', credentials.email)
+            return null
+          }
+
+          const email = credentials.email.toLowerCase().trim()
+          const dbUser =
+            (await getUserByEmail(email)) ??
+            (await upsertUser({
+              email,
+              name: email.split('@')[0],
+              image: null,
+              provider: 'email-otp',
+            }))
+
+          if (!dbUser) {
+            console.error('[EmailOTP] Failed to create or find user for email:', email)
+            return null
+          }
+
+          console.log('[EmailOTP] User authorized:', { userId: dbUser.id, email })
+          return {
+            id: dbUser.id,
+            email,
+            name: dbUser.name ?? email.split('@')[0],
+            image: dbUser.image,
+            isPro: dbUser.isPro,
+          }
+        } catch (err) {
+          console.error('[EmailOTP] Authorization error:', err)
+          return null
         }
       },
     }),
@@ -77,34 +109,57 @@ export const authOptions: NextAuthOptions = {
 
       let dbUser = null
 
-      if (provider !== 'email-otp' && account?.providerAccountId) {
-        dbUser = await resolveOAuthUser({
-          provider,
-          providerAccountId: account.providerAccountId,
-          email,
-          name,
-          image,
-        })
-      } else if (email) {
-        dbUser = await upsertUser({
-          email,
-          name,
-          image,
-          provider,
-        })
+      try {
+        if (provider !== 'email-otp' && account?.providerAccountId) {
+          // OAuth flow: resolve or create user linked to OAuth account
+          dbUser = await resolveOAuthUser({
+            provider,
+            providerAccountId: account.providerAccountId,
+            email,
+            name,
+            image,
+          })
+        } else if (provider !== 'email-otp' && !account?.providerAccountId) {
+          // ERROR: OAuth without providerAccountId — something is wrong
+          console.error(`[NextAuth JWT] OAuth provider "${provider}" missing providerAccountId`, {
+            account,
+            profile,
+            email,
+          })
+          return token // Return empty token, login will fail
+        } else if (email) {
+          // Email-OTP flow: create or update user by email
+          dbUser = await upsertUser({
+            email,
+            name,
+            image,
+            provider,
+          })
+        } else {
+          // No email, no providerAccountId — can't create user
+          console.warn(`[NextAuth JWT] Cannot create user: no email or providerAccountId`, {
+            provider,
+            account,
+          })
+          return token
+        }
+
+        if (dbUser) {
+          token.id = dbUser.id
+          token.email = dbUser.email ?? email ?? undefined
+          token.name = dbUser.name ?? token.name
+          token.picture = dbUser.image ?? token.picture
+          token.provider = provider
+          token.createdAt = (token.createdAt as string) ?? dbUser.createdAt.toISOString()
+          token.lastLogin = new Date().toISOString()
+          token.isPro = dbUser.isPro
+          token.isAdFree = dbUser.isAdFree
+        }
+      } catch (err) {
+        console.error(`[NextAuth JWT] Error during user resolution:`, err)
+        return token // Return empty token on error
       }
 
-      if (dbUser) {
-        token.id = dbUser.id
-        token.email = dbUser.email ?? email ?? undefined
-        token.name = dbUser.name ?? token.name
-        token.picture = dbUser.image ?? token.picture
-        token.provider = provider
-        token.createdAt = (token.createdAt as string) ?? dbUser.createdAt.toISOString()
-        token.lastLogin = new Date().toISOString()
-        token.isPro = dbUser.isPro
-        token.isAdFree = dbUser.isAdFree
-      }
       return token
     },
     async session({ session, token }) {

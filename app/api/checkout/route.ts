@@ -18,14 +18,22 @@ export async function POST(req: Request) {
 
   try {
     const session = await getServerSession(authOptions)
-    const { userId, mode = 'pro', amount } = (await req.json()) as {
+    const { mode = 'pro', amount } = (await req.json()) as {
       userId?: string
       mode?: 'pro' | 'donate' | 'adfree'
       amount?: number
     }
 
-    const effectiveUserId = session?.user?.id ?? userId ?? 'guest'
+    // 要求身份验证 (除了捐赠模式外)
+    if (mode !== 'donate' && !session?.user?.id) {
+      console.warn('[Checkout] Unauthenticated user attempting to upgrade to', mode)
+      return NextResponse.json({ error: 'Authentication required', requiresAuth: true }, { status: 401 })
+    }
+
+    const effectiveUserId = session?.user?.id || 'guest'
     const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
+
+    console.log('[Checkout] Creating checkout session', { userId: effectiveUserId, mode })
 
     if (mode === 'donate' && amount) {
       const checkout = await stripe.checkout.sessions.create({

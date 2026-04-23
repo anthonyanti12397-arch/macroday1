@@ -6,9 +6,11 @@ import { useLang } from '@/contexts/LangContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { getGuestSession } from '@/lib/storage'
+import { useSession } from 'next-auth/react'
 
 export default function DonationBox() {
   const { lang } = useLang()
+  const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
   const [selectedAmount, setSelectedAmount] = useState<number>(5)
   const [customAmount, setCustomAmount] = useState<string>('')
@@ -25,12 +27,14 @@ export default function DonationBox() {
 
     setLoading(true)
     try {
-      const session = getGuestSession()
+      const guestSession = getGuestSession()
+      // 优先使用认证用户的 ID，否则使用游客 ID
+      const userId = session?.user?.id || guestSession?.id || 'guest'
+
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: session?.id || 'guest',
           mode: 'donate',
           amount: finalAmount
         }),
