@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { setUserProStatus, setUserAdFreeStatus, getUserById } from '@/lib/db'
+import { setUserProStatus, setUserAdFreeStatus, getUserById, setUserSubscription, logSubscriptionHistory } from '@/lib/db'
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY
@@ -65,16 +65,45 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Could not identify user' }, { status: 401 })
     }
 
+    // Extract Stripe customer ID from session
+    const stripeCustomerId = checkout.customer as string | null
+
     if (isAdFree) {
-      const result = await setUserAdFreeStatus(userId, true)
-      console.log('[Checkout Confirm] Ad-Free upgrade successful', { userId, mode })
+      // Store subscription data for Ad-Free plan
+      if (stripeCustomerId) {
+        const subscription = checkout.subscription as Stripe.Subscription | null
+        await setUserSubscription(userId, {
+          stripeCustomerId,
+          stripeSubscriptionId: subscription?.id,
+          subscriptionStatus: 'active',
+          isAdFree: true,
+        })
+        await logSubscriptionHistory(userId, 'free', 'adfree', subscription?.id)
+      } else {
+        await setUserAdFreeStatus(userId, true)
+      }
+      console.log('[Checkout Confirm] Ad-Free upgrade successful', { userId, mode, stripeCustomerId })
       return NextResponse.json({ ok: true, isAdFree: true })
     } else {
       const subscription = checkout.subscription as Stripe.Subscription | null
       const trialEnd =
         subscription?.trial_end != null ? new Date(subscription.trial_end * 1000) : null
-      const result = await setUserProStatus(userId, true, trialEnd)
-      console.log('[Checkout Confirm] Pro upgrade successful', { userId, mode, trialEnd })
+
+      // Store subscription data for Pro plan
+      if (stripeCustomerId && subscription) {
+        await setUserSubscription(userId, {
+          stripeCustomerId,
+          stripeSubscriptionId: subscription.id,
+          subscriptionStatus: 'trial',
+          isPro: true,
+          proTrialEndsAt: trialEnd,
+        })
+        await logSubscriptionHistory(userId, 'free', 'pro', subscription.id)
+      } else {
+        await setUserProStatus(userId, true, trialEnd)
+      }
+
+      console.log('[Checkout Confirm] Pro upgrade successful', { userId, mode, trialEnd, stripeCustomerId, subscriptionId: subscription?.id })
       return NextResponse.json({ ok: true, isPro: true })
     }
   } catch (error) {

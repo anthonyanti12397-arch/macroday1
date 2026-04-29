@@ -8,6 +8,9 @@ import { saveUserProfile, getUserProfile } from '@/lib/storage'
 import { CheckCircle, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 
+// Track confirmed sessions globally to prevent race conditions
+const confirmedSessions = new Set<string>()
+
 export default function UpgradeSuccessPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -15,6 +18,15 @@ export default function UpgradeSuccessPage() {
   const [confirmed, setConfirmed] = useState(false)
 
   useEffect(() => {
+    const sessionId = searchParams.get('session_id')
+
+    // Prevent duplicate confirmation calls - use sessionId itself as the key
+    if (sessionId && confirmedSessions.has(sessionId)) {
+      console.log('[UpgradeSuccess] Session already confirmed:', sessionId)
+      setConfirmed(true)
+      return
+    }
+
     const duration = 3 * 1000
     const animationEnd = Date.now() + duration
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 }
@@ -36,8 +48,10 @@ export default function UpgradeSuccessPage() {
       saveUserProfile({ ...profile, isPro: true })
     }
 
-    const sessionId = searchParams.get('session_id')
     if (sessionId) {
+      // Mark this session as being confirmed
+      confirmedSessions.add(sessionId)
+
       fetch('/api/checkout/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

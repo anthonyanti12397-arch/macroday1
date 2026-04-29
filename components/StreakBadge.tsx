@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Flame } from 'lucide-react'
 import { getStreakData, type StreakData } from '@/lib/streak'
 import { useLang } from '@/contexts/LangContext'
-import { addMacroScore, getLastStreakReward, setLastStreakReward, unlockPart } from '@/lib/storage'
+import { getLastStreakReward, setLastStreakReward } from '@/lib/storage'
 import { toast } from 'sonner'
 
 export default function StreakBadge() {
@@ -17,12 +17,8 @@ export default function StreakBadge() {
     
     if (s && s.current > 0) {
       if (s.current % 7 === 0 && getLastStreakReward() !== s.current) {
-        addMacroScore(50)
         setLastStreakReward(s.current)
-        toast.success(lang === 'zh' ? '🏆 +50 分！達成 7 天連勝' : '🏆 +50 pts! 7-day streak')
-      }
-      if (s.current >= 30) {
-        unlockPart('streak_legend')
+        toast.success(lang === 'zh' ? '🏆 達成 7 天連勝！繼續保持' : '🏆 7-day streak! Keep it up')
       }
     }
   }, [lang])

@@ -5,8 +5,9 @@ import { signIn } from 'next-auth/react'
 import { saveGuestSession, saveLang } from '@/lib/storage'
 import type { GuestSession } from '@/lib/types'
 import Logo from './Logo'
-import { Mail, ArrowRight, Users, Chrome, ChevronLeft, RefreshCw, Apple } from 'lucide-react'
+import { Mail, ArrowRight, Users, Chrome, ChevronLeft, RefreshCw, Apple, Zap, BarChart3, ShoppingCart } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface LoginScreenProps {
   onLogin: (data?: GuestSession) => void
@@ -26,6 +27,93 @@ function randomGuestId(): string {
 }
 
 type Step = 'landing' | 'email' | 'otp'
+
+// ── Demo card that cycles through sample meal plans ───────────────────────
+const DEMO_PLANS = [
+  {
+    name: '💪 Muscle Gain',
+    nameZh: '💪 增肌計畫',
+    cal: 2650, protein: 195, carbs: 280, fat: 75,
+    meals: ['雞胸米飯便當', '吞拿魚沙拉', '牛肉炒蔬菜'],
+    mealsEn: ['Chicken Rice Bowl', 'Tuna Salad', 'Beef Stir-fry'],
+  },
+  {
+    name: '🔥 Fat Loss',
+    nameZh: '🔥 減脂計畫',
+    cal: 1750, protein: 160, carbs: 130, fat: 60,
+    meals: ['燕麥蛋白奶昔', '烤三文魚沙拉', '豆腐蔬菜湯'],
+    mealsEn: ['Oat Protein Shake', 'Grilled Salmon Salad', 'Tofu Veggie Soup'],
+  },
+  {
+    name: '⚖️ Maintain',
+    nameZh: '⚖️ 維持體重',
+    cal: 2100, protein: 145, carbs: 230, fat: 70,
+    meals: ['蛋炒飯', '豬扒飯', '清蒸魚飯'],
+    mealsEn: ['Egg Fried Rice', 'Pork Chop Rice', 'Steamed Fish'],
+  },
+]
+
+function DemoMacroCard({ lang }: { lang: 'en' | 'zh' }) {
+  const [idx, setIdx] = useState(0)
+
+  useEffect(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % DEMO_PLANS.length), 3000)
+    return () => clearInterval(t)
+  }, [])
+
+  const plan = DEMO_PLANS[idx]
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={idx}
+        initial={{ opacity: 0, y: 10, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -8, scale: 0.97 }}
+        transition={{ duration: 0.35 }}
+        className="w-full rounded-2xl border border-[#0F9E75]/20 bg-white dark:bg-slate-800/60 p-4 shadow-sm text-left"
+      >
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-bold text-[#0F9E75]">{lang === 'zh' ? plan.nameZh : plan.name}</span>
+          <span className="text-xs text-slate-400">{lang === 'zh' ? '每日平均' : 'daily avg'}</span>
+        </div>
+        {/* Macro row */}
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {[
+            { label: lang === 'zh' ? '卡路里' : 'Cal', value: plan.cal, unit: 'kcal', color: 'text-violet-500' },
+            { label: lang === 'zh' ? '蛋白質' : 'Protein', value: plan.protein, unit: 'g', color: 'text-emerald-500' },
+            { label: lang === 'zh' ? '碳水' : 'Carbs', value: plan.carbs, unit: 'g', color: 'text-amber-500' },
+            { label: lang === 'zh' ? '脂肪' : 'Fat', value: plan.fat, unit: 'g', color: 'text-rose-500' },
+          ].map((m) => (
+            <div key={m.label} className="text-center">
+              <div className={`text-base font-black ${m.color}`}>{m.value}</div>
+              <div className="text-[10px] text-slate-400">{m.unit}</div>
+              <div className="text-[10px] text-slate-500">{m.label}</div>
+            </div>
+          ))}
+        </div>
+        {/* Sample meals */}
+        <div className="space-y-1">
+          {(lang === 'zh' ? plan.meals : plan.mealsEn).map((meal, i) => (
+            <div key={i} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+              <span className="text-[10px]">{['🌅','☀️','🌙'][i]}</span>
+              <span>{meal}</span>
+            </div>
+          ))}
+        </div>
+        {/* Dots indicator */}
+        <div className="flex justify-center gap-1.5 mt-3">
+          {DEMO_PLANS.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${i === idx ? 'bg-[#0F9E75] w-4' : 'bg-slate-200 dark:bg-slate-600 w-1.5'}`}
+            />
+          ))}
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
 
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const { isDark } = useTheme()
@@ -241,24 +329,55 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         </button>
       </div>
 
-      {/* Logo + tagline (landing only) */}
+      {/* Hero (landing only) */}
       {step === 'landing' && (
-        <div className="flex flex-col items-center text-center gap-5 flex-1 justify-center py-8">
+        <div className="flex flex-col items-center text-center gap-4 flex-1 justify-center py-4 w-full max-w-sm">
+          {/* Glow */}
           <div
-            className="absolute top-20 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full opacity-20 pointer-events-none"
+            className="absolute top-16 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full opacity-20 pointer-events-none"
             style={{ background: 'radial-gradient(circle, #0BD68A 0%, transparent 70%)' }}
           />
+
           <Logo lang={lang} size="lg" className="relative" />
-          <div className="space-y-2">
-            <p className="text-xl font-bold text-slate-800 dark:text-slate-200 leading-snug">{c.tagline}</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs">{c.sub}</p>
+
+          {/* Headline */}
+          <div className="space-y-1.5 relative">
+            <h1 className="text-2xl font-black text-slate-800 dark:text-white leading-tight">
+              {lang === 'zh'
+                ? <>AI 幫你計劃<br /><span className="text-[#0F9E75]">每日三餐</span> 的宏量</>
+                : <>AI meal plans,<br /><span className="text-[#0F9E75]">built for your body</span></>
+              }
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">
+              {lang === 'zh'
+                ? '輸入你的目標和體型，AI 幫你規劃一週三餐 + 購物清單，蛋白質不再猜'
+                : 'Tell us your goal. Get a full week of meals with exact macros — no guesswork.'}
+            </p>
           </div>
-          <div className="flex flex-wrap gap-2 justify-center mt-2">
-            {(lang === 'zh'
-              ? ['早午晚三餐', '身體數據追蹤', 'AI 個人化', '購物清單']
-              : ['3 meals/day', 'Body tracking', 'AI personalised', 'Shopping list']
-            ).map((f) => (
-              <span key={f} className="text-xs font-semibold text-[#0F9E75] bg-[#E8F5F0] px-3 py-1 rounded-full">{f}</span>
+
+          {/* Animated demo card */}
+          <DemoMacroCard lang={lang} />
+
+          {/* Social proof */}
+          <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
+            <div className="flex -space-x-1.5">
+              {['🧑‍💻','👩‍🍳','🧑‍🏋️','👨‍⚕️','👩‍💼'].map((e, i) => (
+                <div key={i} className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 border-2 border-white dark:border-[#0F172A] flex items-center justify-center text-[10px]">{e}</div>
+              ))}
+            </div>
+            <span>{lang === 'zh' ? '已有超過 500 人使用' : '500+ people tracking macros'}</span>
+          </div>
+
+          {/* Feature pills */}
+          <div className="flex flex-wrap gap-2 justify-center">
+            {[
+              { icon: <Zap size={11} />, label: lang === 'zh' ? 'AI 即時生成' : 'AI in seconds' },
+              { icon: <BarChart3 size={11} />, label: lang === 'zh' ? '宏量追蹤' : 'Macro tracking' },
+              { icon: <ShoppingCart size={11} />, label: lang === 'zh' ? '購物清單' : 'Shopping list' },
+            ].map((f) => (
+              <span key={f.label} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F9E75] bg-[#E8F5F0] dark:bg-[#0F9E75]/10 px-3 py-1.5 rounded-full">
+                {f.icon}{f.label}
+              </span>
             ))}
           </div>
         </div>

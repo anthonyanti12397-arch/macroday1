@@ -67,6 +67,10 @@ export async function getUserById(id: string) {
   return prisma.user.findUnique({ where: { id } })
 }
 
+export async function getUserByStripeCustomerId(stripeCustomerId: string) {
+  return prisma.user.findUnique({ where: { stripeCustomerId } })
+}
+
 export async function getUserByAuthAccount(provider: string, providerAccountId: string) {
   const account = await prisma.authAccount.findUnique({
     where: { provider_providerAccountId: { provider, providerAccountId } },
@@ -359,14 +363,6 @@ export async function getUserCloudSnapshot(userId: string): Promise<CloudSnapsho
     appState: {
       trainingHistory: localState?.trainingHistory ?? [],
       favorites: localState?.favorites ?? [],
-      macroScore: localState?.macroScore ?? 0,
-      unlockedParts: localState?.unlockedParts ?? ['head_none', 'top_basic_white', 'bottom_sweats_gray', 'acc_none'],
-      equippedLoadout: localState?.equippedLoadout ?? {
-        head: 'head_none',
-        top: 'top_basic_white',
-        bottom: 'bottom_sweats_gray',
-        accessory: 'acc_none',
-      },
       lang: localState?.lang === 'en' ? 'en' : 'zh',
     },
   }
@@ -563,4 +559,85 @@ export async function getForumPost(postId: string, currentUserId?: string) {
     ...post,
     likedByMe: Array.isArray(post.likes) ? post.likes.length > 0 : false,
   }
+}
+
+// Subscription Management Functions
+
+export async function setUserSubscription(userId: string, data: {
+  stripeCustomerId?: string
+  stripeSubscriptionId?: string
+  subscriptionStatus?: string
+  isPro?: boolean
+  isAdFree?: boolean
+  proTrialEndsAt?: Date | null
+}) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      stripeCustomerId: data.stripeCustomerId,
+      stripeSubscriptionId: data.stripeSubscriptionId,
+      subscriptionStatus: data.subscriptionStatus,
+      isPro: data.isPro,
+      isAdFree: data.isAdFree,
+      proTrialEndsAt: data.proTrialEndsAt,
+    },
+  })
+}
+
+export async function getSubscriptionStatus(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      stripeCustomerId: true,
+      stripeSubscriptionId: true,
+      subscriptionStatus: true,
+      isPro: true,
+      isAdFree: true,
+      proTrialEndsAt: true,
+    },
+  })
+}
+
+export async function logSubscriptionHistory(userId: string, fromPlan: string, toPlan: string, stripeEventId?: string) {
+  return prisma.subscriptionHistory.create({
+    data: {
+      userId,
+      fromPlan,
+      toPlan,
+      stripeEventId,
+    },
+  })
+}
+
+export async function createInvoice(data: {
+  userId: string
+  stripeInvoiceId: string
+  amount: number
+  currency: string
+  status: string
+  dueDate?: Date | null
+  paidAt?: Date | null
+  description?: string | null
+}) {
+  return prisma.invoice.create({
+    data,
+  })
+}
+
+export async function getSubscriptionInvoices(userId: string, limit: number = 20) {
+  return prisma.invoice.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+  })
+}
+
+export async function updateInvoiceStatus(stripeInvoiceId: string, status: string, paidAt?: Date) {
+  return prisma.invoice.update({
+    where: { stripeInvoiceId },
+    data: {
+      status,
+      paidAt,
+    },
+  })
 }

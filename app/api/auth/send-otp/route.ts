@@ -94,7 +94,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Return the signed token — client stores it and passes it back during verify
-    return NextResponse.json({ token })
+    // Also return OTP in dev for testing purposes
+    const response: any = { token }
+    if (process.env.NODE_ENV === 'development') {
+      response.otp = otp
+      console.log(`[DEV] OTP for ${normalizedEmail}: ${otp}`)
+    }
+    return NextResponse.json(response)
   } catch (err) {
     console.error('send-otp error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

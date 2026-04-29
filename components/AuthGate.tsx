@@ -47,8 +47,7 @@ function AuthGateInner({ children }: { children: React.ReactNode }) {
       !!payload.weeklyPlan ||
       !!payload.dailyMeals ||
       (payload.appState?.trainingHistory.length ?? 0) > 0 ||
-      (payload.appState?.favorites.length ?? 0) > 0 ||
-      (payload.appState?.macroScore ?? 0) > 0
+      (payload.appState?.favorites.length ?? 0) > 0
 
     if (hasLocalData) {
       fetch('/api/user/sync', {

@@ -14,6 +14,7 @@ import { useLang } from '@/contexts/LangContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import UpgradePrompt from './UpgradePrompt'
 import Logo from './Logo'
+import SubscriptionManager from './SubscriptionManager'
 
 interface SettingsSheetProps {
   onClose: () => void
@@ -288,6 +289,14 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
                 </div>
               </Section>
 
+              {/* ── Subscription Management ──────────────────────── */}
+              {isAuthenticated && (profile?.isPro || profile?.isAdFree) && (
+                <Section title={s.accountSection || 'Account'} icon={User}>
+                  <div className="px-4 py-4">
+                    <SubscriptionManager />
+                  </div>
+                </Section>
+              )}
 
               {/* ── Legal ──────────────────────────────────────────── */}
               <Section title={lang === 'zh' ? '法律資訊' : 'Legal'} icon={ShieldCheck}>

@@ -27,6 +27,7 @@ const ConfettiCelebration = dynamic(() => import('@/components/ConfettiCelebrati
 const UpgradePrompt = dynamic(() => import('@/components/UpgradePrompt'))
 const ExportPDFButton = dynamic(() => import('@/components/ExportPDFButton'), { ssr: false })
 const ShareButton = dynamic(() => import('@/components/ShareButton'), { ssr: false })
+const SharePlanButton = dynamic(() => import('@/components/SharePlanButton'), { ssr: false })
 const UsageCounter = dynamic(() => import('@/components/UsageCounter'))
 const FoodVisionModal = dynamic(() => import('@/components/FoodVisionModal'), { ssr: false })
 import { canGenerateDaily, canUseFeature, isProUser } from '@/lib/featureGate'
@@ -677,8 +678,9 @@ export default function MealPlanPage() {
 
           {!loadingWeek && plan && (
             <div className="space-y-4">
-              <div className="flex justify-end pr-1">
-                 <ExportPDFButton targetId="weekly-plan-content" fileName="MacroDay-Weekly-Plan" />
+              <div className="flex justify-end gap-2 pr-1">
+                <SharePlanButton />
+                <ExportPDFButton targetId="weekly-plan-content" fileName="MacroDay-Weekly-Plan" />
               </div>
                <div id="weekly-plan-content" className="p-1">
                 <MealPlanGrid plan={plan} imagesLoading={imagesLoading} />

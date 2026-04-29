@@ -108,9 +108,6 @@ export interface GuestSession {
 export interface CloudAppState {
   trainingHistory: TrainingRecord[]
   favorites: Meal[]
-  macroScore: number
-  unlockedParts: string[]
-  equippedLoadout: Record<string, string>
   lang: 'en' | 'zh'
 }
 

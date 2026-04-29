@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getInBodyHistory, getMacroScore, getComplianceHistory } from '@/lib/storage'
+import { getInBodyHistory, getComplianceHistory } from '@/lib/storage'
 import { motion } from 'framer-motion'
 import { Check, Lock, ChevronRight } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
@@ -27,7 +27,6 @@ export default function RoadmapPage() {
 
   useEffect(() => {
     const inbodyHistory = getInBodyHistory()
-    const macroScore = getMacroScore()
     const complianceHistory = getComplianceHistory(365)
 
     // Calculate milestones
@@ -91,36 +90,6 @@ export default function RoadmapPage() {
         icon: '📉',
         condition: () => weightChange > 2,
         achieved: weightChange > 2
-      },
-      {
-        id: 'score_100',
-        titleZh: '💯 100 分里程碑',
-        titleEn: '💯 100 Points',
-        descZh: '累積 100 個 MacroScore',
-        descEn: 'Earned 100 MacroScore points',
-        icon: '💯',
-        condition: () => macroScore >= 100,
-        achieved: macroScore >= 100
-      },
-      {
-        id: 'score_500',
-        titleZh: '🏆 500 分達成',
-        titleEn: '🏆 500 Points Achieved',
-        descZh: '累積 500 個 MacroScore',
-        descEn: 'Earned 500 MacroScore points',
-        icon: '🏆',
-        condition: () => macroScore >= 500,
-        achieved: macroScore >= 500
-      },
-      {
-        id: 'score_1000',
-        titleZh: '👑 1000 分傳奇',
-        titleEn: '👑 1000 Points Legend',
-        descZh: '累積 1000 個 MacroScore',
-        descEn: 'Earned 1000 MacroScore points',
-        icon: '👑',
-        condition: () => macroScore >= 1000,
-        achieved: macroScore >= 1000
       },
     ]
 

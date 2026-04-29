@@ -456,9 +456,6 @@ export function getCloudAppState(): CloudAppState {
   return {
     trainingHistory: getTrainingHistory(),
     favorites: getFavorites(),
-    macroScore: getMacroScore(),
-    unlockedParts: getUnlockedParts(),
-    equippedLoadout: getEquippedLoadout(),
     lang: getLang(),
   }
 }
@@ -470,9 +467,6 @@ export function applyCloudSnapshot(snapshot: CloudSnapshot): void {
   replaceWeeklyPlan(snapshot.weeklyPlan)
   replaceTrainingHistory(snapshot.appState.trainingHistory)
   replaceFavorites(snapshot.appState.favorites)
-  setMacroScore(snapshot.appState.macroScore)
-  replaceUnlockedParts(snapshot.appState.unlockedParts)
-  setEquippedLoadout(snapshot.appState.equippedLoadout)
   saveLang(snapshot.appState.lang)
 }
 
@@ -523,108 +517,6 @@ export function replaceTrainingHistory(records: TrainingRecord[]): void {
   }
 }
 
-// ── Avatar & MacroScore ───────────────────────────────────────────────────────
-
-export function getMacroScore(): number {
-  try {
-    const raw = localStorage.getItem('macroday_score')
-    if (!raw) return 0
-    return parseInt(raw, 10) || 0
-  } catch {
-    return 0
-  }
-}
-
-export function addMacroScore(points: number): void {
-  try {
-    const current = getMacroScore()
-    localStorage.setItem('macroday_score', (current + points).toString())
-  } catch {
-    // SSR
-  }
-}
-
-export function setMacroScore(points: number): void {
-  try {
-    localStorage.setItem('macroday_score', String(Math.max(0, points)))
-  } catch {
-    // SSR
-  }
-}
-
-export function spendMacroScore(points: number): boolean {
-  try {
-    const current = getMacroScore()
-    if (current < points) return false
-    localStorage.setItem('macroday_score', (current - points).toString())
-    return true
-  } catch {
-    return false
-  }
-}
-
-export function getUnlockedParts(): string[] {
-  try {
-    const raw = localStorage.getItem('macroday_unlocked_parts')
-    if (!raw) return ['head_none', 'top_basic_white', 'bottom_sweats_gray', 'acc_none']
-    return JSON.parse(raw) as string[]
-  } catch {
-    return ['head_none', 'top_basic_white', 'bottom_sweats_gray', 'acc_none']
-  }
-}
-
-export function unlockPart(id: string): void {
-  try {
-    const current = getUnlockedParts()
-    if (!current.includes(id)) {
-      current.push(id)
-      localStorage.setItem('macroday_unlocked_parts', JSON.stringify(current))
-    }
-  } catch {
-    // SSR
-  }
-}
-
-export function replaceUnlockedParts(ids: string[]): void {
-  try {
-    localStorage.setItem('macroday_unlocked_parts', JSON.stringify(ids))
-  } catch {
-    // SSR
-  }
-}
-
-export function getEquippedLoadout(): Record<string, string> {
-  const defaultLoadout = {
-    head: 'head_none',
-    top: 'top_basic_white',
-    bottom: 'bottom_sweats_gray',
-    accessory: 'acc_none'
-  }
-  try {
-    const raw = localStorage.getItem('macroday_equipped_loadout')
-    if (!raw) {
-      // Fallback migrating old `macroday_equipped_outfit`
-      const oldRaw = localStorage.getItem('macroday_equipped_outfit')
-      if (oldRaw === 'gym_black') return { head: 'head_none', top: 'top_tank_black', bottom: 'bottom_shorts_black', accessory: 'acc_none' }
-      if (oldRaw === 'teal_pro') return { head: 'head_none', top: 'top_hoodie_teal', bottom: 'bottom_sweats_gray', accessory: 'acc_none' }
-      if (oldRaw === 'fire_red') return { head: 'head_headband_red', top: 'top_basic_white', bottom: 'bottom_shorts_black', accessory: 'acc_flame' }
-      if (oldRaw === 'galaxy') return { head: 'head_headphones', top: 'top_jacket_galaxy', bottom: 'bottom_pants_galaxy', accessory: 'acc_none' }
-      return defaultLoadout
-    }
-    return JSON.parse(raw)
-  } catch {
-    return defaultLoadout
-  }
-}
-
-export function setEquippedLoadout(loadout: Record<string, string>): void {
-  try {
-    localStorage.setItem('macroday_equipped_loadout', JSON.stringify(loadout))
-  } catch {
-    // SSR
-  }
-}
-
 export function getLastStreakReward(): number {
   try {
     const raw = localStorage.getItem('macroday_last_streak_bonus')
@@ -643,38 +535,3 @@ export function setLastStreakReward(streakCount: number): void {
   }
 }
 
-// ── Starter Gear Logic ────────────────────────────────────────────────────────
-
-export function isStarterGearReceived(): boolean {
-  try {
-    return localStorage.getItem('macroday_starter_received') === '1'
-  } catch {
-    return false
-  }
-}
-
-export function checkAndInitStarterGear(gearDb: import('./outfits').GearPart[]): string[] | null {
-  if (isStarterGearReceived()) return null
-
-  try {
-    // Select 2 random items from Common or Rare pools (excluding 'none')
-    const pool = gearDb.filter(p => 
-      (p.rarity === 'common' || p.rarity === 'rare') && 
-      !p.id.endsWith('_none')
-    )
-    
-    // Shuffle and pick 2
-    const shuffled = [...pool].sort(() => 0.5 - Math.random())
-    const starterItems = shuffled.slice(0, 2).map(p => p.id)
-    
-    const current = getUnlockedParts()
-    const updated = Array.from(new Set([...current, ...starterItems]))
-    
-    localStorage.setItem('macroday_unlocked_parts', JSON.stringify(updated))
-    localStorage.setItem('macroday_starter_received', '1')
-    
-    return starterItems
-  } catch {
-    return null
-  }
-}

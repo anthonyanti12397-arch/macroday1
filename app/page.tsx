@@ -2,20 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle, Activity, TrendingUp } from 'lucide-react'
+import { Settings, Zap, UtensilsCrossed, ShieldAlert, CheckCircle, Activity, TrendingUp, Camera } from 'lucide-react'
 import Logo from '@/components/Logo'
-import Avatar from '@/components/Avatar'
 import SettingsSheet from '@/components/SettingsSheet'
 import SignInPrompt from '@/components/SignInPrompt'
 import { useLang } from '@/contexts/LangContext'
-import { getLatestInBody, getUserProfile, getTodayDailyMeals, getGuestSession, getFromStatsCache, getInBodyHistory, getTrainingHistory, getEquippedLoadout, getMacroScore } from '@/lib/storage'
+import { getLatestInBody, getUserProfile, getTodayDailyMeals, getGuestSession, getFromStatsCache, getInBodyHistory, getTrainingHistory } from '@/lib/storage'
 import { generateStatsHash, setMemoryCache } from '@/lib/cache'
 import type { InBodyRecord, UserProfile, DailyMeals, TrainingRecord } from '@/lib/types'
 import MacroBar from '@/components/MacroBar'
 import UpgradePrompt from '@/components/UpgradePrompt'
 import { useSession } from 'next-auth/react'
 import { BETA_MODE } from '@/lib/constants'
-import DonationBox from '@/components/DonationBox'
 import ShareButton from '@/components/ShareButton'
 import ComplianceCalendar from '@/components/ComplianceCalendar'
 import ProgressRing from '@/components/ProgressRing'
@@ -25,6 +23,9 @@ import NutritionTrend from '@/components/NutritionTrend'
 import WeeklyInsights from '@/components/WeeklyInsights'
 import WeightSparkline from '@/components/WeightSparkline'
 import AdBanner from '@/components/AdBanner'
+import dynamic from 'next/dynamic'
+const FoodSnapModal = dynamic(() => import('@/components/FoodSnapModal'), { ssr: false })
+
 function estimateBMR(r: InBodyRecord): number {
   if (r.bmr) return r.bmr
   const base = 10 * r.weight + 6.25 * r.height - 5 * r.age
@@ -60,22 +61,51 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [showFoodSnap, setShowFoodSnap] = useState(false)
   const [todayMeals, setTodayMeals] = useState<DailyMeals | null>(null)
   const [isGuest, setIsGuest] = useState(false)
   const [guestWarningDismissed, setGuestWarningDismissed] = useState(false)
   const [inbodyHistoryLength, setInbodyHistoryLength] = useState(0)
   const [todayTraining, setTodayTraining] = useState<TrainingRecord | null>(null)
-  const [equippedLoadout, setEquippedLoadout] = useState<Record<string, string>>({})
-  const [macroScore, setMacroScore] = useState(0)
   
+  const loadLocalData = () => {
+    const currentInbody = getLatestInBody()
+    const currentProfile = getUserProfile()
+    setInbody(currentInbody)
+    setProfile(currentProfile)
+    setIsGuest(!!getGuestSession())
+    const history = getInBodyHistory()
+    setInbodyHistoryLength(history.length)
+    const th = getTrainingHistory()
+    const d = new Date()
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const todayT = th.find(t => t.date === todayStr)
+    if (todayT) setTodayTraining(todayT)
+    else setTodayTraining(null)
+    if (currentInbody && currentProfile) {
+      const cacheHash = generateStatsHash(currentInbody, currentProfile, lang)
+      const statsCached = getFromStatsCache<DailyMeals>(cacheHash + '_daily')
+      if (statsCached) {
+        setTodayMeals(statsCached)
+        setMemoryCache(cacheHash + '_daily', statsCached)
+        return
+      }
+    }
+    setTodayMeals(getTodayDailyMeals())
+  }
+
+  useEffect(() => {
+    window.addEventListener('macroday:synced', loadLocalData)
+    return () => window.removeEventListener('macroday:synced', loadLocalData)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang])
+
   useEffect(() => {
     const currentInbody = getLatestInBody()
     const currentProfile = getUserProfile()
     setInbody(currentInbody)
     setProfile(currentProfile)
     setIsGuest(!!getGuestSession())
-    setEquippedLoadout(getEquippedLoadout())
-    setMacroScore(getMacroScore())
     
     const history = getInBodyHistory()
     setInbodyHistoryLength(history.length)
@@ -111,18 +141,15 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <StreakBadge />
-          
-          <Link href="/avatar" className="relative">
-            <div className="w-10 h-10 rounded-2xl bg-[#E8F5F0] dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center hover:border-[#0F9E75] transition-colors"
-              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-              <Avatar loadout={equippedLoadout} size="sm" />
-            </div>
-            {macroScore > 0 && (
-              <span className="absolute -top-1 -right-1 bg-[#F59E0B] text-white text-[9px] font-black rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
-                {macroScore}
-              </span>
-            )}
-          </Link>
+
+          <button
+            onClick={() => setShowFoodSnap(true)}
+            className="p-2.5 rounded-2xl bg-[#0F9E75] hover:bg-[#0a8a65] transition-colors"
+            style={{ boxShadow: '0 2px 8px rgba(15,158,117,0.35)' }}
+            title="Snap a meal"
+          >
+            <Camera size={18} className="text-white" />
+          </button>
 
           <button
             onClick={() => setShowSettings(true)}
@@ -434,17 +461,13 @@ export default function DashboardPage() {
             )}
           </Link>
 
-          {/* Support Developer */}
-          {inbodyHistoryLength > 3 && (
-            <>
-              <AdBanner />
-              <DonationBox />
-            </>
-          )}
+          {inbodyHistoryLength > 3 && <AdBanner />}
         </>
       )}
 
       {/* Settings sheet */}
+      {showFoodSnap && <FoodSnapModal onClose={() => setShowFoodSnap(false)} />}
+
       {showSettings && (
         <SettingsSheet
           onClose={() => setShowSettings(false)}

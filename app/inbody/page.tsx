@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getInBodyHistory, getLatestInBody, getUserProfile, addMacroScore } from '@/lib/storage'
+import { getInBodyHistory, getLatestInBody, getUserProfile } from '@/lib/storage'
 import type { InBodyRecord, UserProfile } from '@/lib/types'
 import InBodyForm from '@/components/InBodyForm'
 import InBodyChartModal from '@/components/InBodyChartModal'
@@ -36,7 +36,6 @@ export default function InBodyPage() {
     setSaved(true)
     setEditingRecord(null)
     setTimeout(() => setSaved(false), 2500)
-    addMacroScore(20)
     toast.success(lang === 'zh' ? '🏆 +20 分！記錄了新的資料' : '🏆 +20 pts! New data added')
   }
 

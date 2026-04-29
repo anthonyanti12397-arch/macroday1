@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getLatestInBody, getUserProfile, getTrainingHistory, saveTrainingRecord, addMacroScore } from '@/lib/storage'
+import { getLatestInBody, getUserProfile, getTrainingHistory, saveTrainingRecord } from '@/lib/storage'
 import type { InBodyRecord, UserProfile, TrainingRecord, TrainingPlan } from '@/lib/types'
 import { useLang } from '@/contexts/LangContext'
 import { CheckCircle, Activity, Loader2, Dumbbell, Flame, Clock } from 'lucide-react'
@@ -123,7 +123,6 @@ export default function TrainingPage() {
     if (typeof window !== 'undefined' && window.navigator.vibrate) {
       window.navigator.vibrate([100, 50, 100])
     }
-    addMacroScore(15)
     toast.success(lang === 'zh' ? '🏆 +15 分！做的好' : '🏆 +15 pts! Great job')
   }
 

@@ -1,5 +1,20 @@
 import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
+import { validateEnvironment } from '@/lib/env-validation'
+
+// Validate environment variables on startup
+if (typeof window === 'undefined') {
+  try {
+    validateEnvironment()
+  } catch (error) {
+    console.error('Fatal: Environment validation failed. Server cannot start.')
+    if (error instanceof Error) {
+      console.error(error.message)
+    }
+    // Note: process.exit not available in Edge Runtime, but this is only for development
+    // In production, env validation happens at startup and deployment will fail if vars are missing
+  }
+}
 
 /**
  * Protected routes — add paths here as the community grows.
@@ -8,7 +23,6 @@ import { NextResponse } from 'next/server'
  */
 export default withAuth(
   function middleware(req) {
-    // Could add role checks here later, e.g. req.nextauth.token?.role === 'admin'
     return NextResponse.next()
   },
   {

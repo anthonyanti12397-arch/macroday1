@@ -6,7 +6,7 @@ import type { Meal } from '@/lib/types'
 import { ChevronDown, ChevronUp, Clock, Heart, CheckCircle2, ShoppingBag, UtensilsCrossed, RefreshCw } from 'lucide-react'
 import Image from 'next/image'
 import { useLang } from '@/contexts/LangContext'
-import { toggleMealEaten, getEatenMeals, toggleFavorite, isFavorite, addMacroScore } from '@/lib/storage'
+import { toggleMealEaten, getEatenMeals, toggleFavorite, isFavorite } from '@/lib/storage'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 
@@ -43,8 +43,7 @@ export default function MealCard({ meal, mealType, imageLoading = false, mealKey
     const isNowEaten = updated.includes(mealKey)
     setEaten(isNowEaten)
     if (isNowEaten && updated.length === 3) {
-      addMacroScore(10)
-      toast.success(lang === 'zh' ? '🏆 +10 分！三餐全制霸' : '🏆 +10 pts! All meals complete')
+      toast.success(lang === 'zh' ? '🏆 三餐全制霸！' : '🏆 All meals complete!')
     } else if (isNowEaten) {
       toast.success(lang === 'zh' ? '✅ 已記錄' : '✅ Marked as eaten')
     }
