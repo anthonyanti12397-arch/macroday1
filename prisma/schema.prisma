@@ -43,6 +43,9 @@ model User {
   promptFeedback      PromptFeedback[]
   subscriptionHistory SubscriptionHistory[]
   invoices            Invoice[]
+  sentFriendRequests  Friendship[]         @relation("FriendRequester")
+  receivedFriendRequests Friendship[]      @relation("FriendAddressee")
+  stepLogs            StepLog[]
 }
 
 model AuthAccount {
@@ -154,6 +157,38 @@ model PromptFeedback {
   createdAt          DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// Friend system
+model Friendship {
+  id         String   @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status     String   @default("pending") // pending|accepted|blocked
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  requester  User     @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee  User     @relation("FriendAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([requesterId, status])
+  @@index([addresseeId, status])
+}
+
+// Step tracking
+model StepLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String   // YYYY-MM-DD
+  steps     Int
+  source    String   @default("manual") // manual|healthkit|googlefit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
 }
 
 model SubscriptionHistory {

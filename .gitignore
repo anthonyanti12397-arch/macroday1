@@ -43,3 +43,4 @@ scratch/
 # iOS build artifacts
 ios/App/App/build/
 ios/App/Pods/
+.gstack/

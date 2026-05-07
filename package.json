@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "build:ios": "CAPACITOR_BUILD=true next build && npx cap sync ios",
+    "open:ios": "npx cap open ios"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",

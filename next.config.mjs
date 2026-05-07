@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // For Capacitor iOS build: enables `next export` → static `out/` folder
+  // Comment this out during regular web development (SSR features need this off)
+  output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : undefined,
   images: {
     remotePatterns: [
       // SiliconFlow image generation (FLUX model outputs)

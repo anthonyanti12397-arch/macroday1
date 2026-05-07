@@ -186,6 +186,56 @@ export function isRunningOnIOS(): boolean {
 }
 
 /**
+ * HealthKit Step Sync
+ * Reads today's step count from Apple Health and posts to /api/steps/log.
+ * Requires @capacitor-community/health plugin (see README for setup).
+ * Falls back gracefully on web — no-op.
+ *
+ * iOS setup (one-time):
+ *   npm install @capacitor-community/health
+ *   npx cap sync ios
+ *   In Xcode: add NSHealthShareUsageDescription to Info.plist
+ *             enable HealthKit capability in Signing & Capabilities
+ */
+export async function syncHealthKitSteps(): Promise<{ steps: number; synced: boolean }> {
+  if (!isIOS) return { steps: 0, synced: false }
+
+  try {
+    // Dynamic import — only bundled on iOS builds
+    const { Health } = await import('@capacitor-community/health')
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(today.getDate() + 1)
+
+    await Health.requestAuthorization({ read: ['steps'] })
+
+    const result = await Health.query({
+      startDate: today.toISOString(),
+      endDate: tomorrow.toISOString(),
+      dataType: 'steps',
+      limit: 1,
+    })
+
+    const steps = result?.reduce?.((sum: number, r: { value: number }) => sum + (r.value ?? 0), 0) ?? 0
+    if (steps > 0) {
+      const dateStr = today.toISOString().slice(0, 10)
+      await fetch('/api/steps/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateStr, steps, source: 'healthkit' }),
+      })
+    }
+
+    return { steps, synced: true }
+  } catch (error) {
+    console.warn('[HealthKit] Sync failed (expected on web or if permissions denied):', error)
+    return { steps: 0, synced: false }
+  }
+}
+
+/**
  * Get app information for debugging
  */
 export async function getAppInfo(): Promise<{

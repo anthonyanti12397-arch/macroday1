@@ -2,12 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CAPACITOR_DEBUG</key>
+	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
+
+	<!-- App Identity -->
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>MacroDay</string>
+	<string>MacroDay</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -22,30 +24,80 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+
+	<!-- Required -->
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+
+	<!-- Camera — for Food Snap feature -->
+	<key>NSCameraUsageDescription</key>
+	<string>MacroDay needs camera access to snap photos of your meals for AI nutrition analysis.</string>
+
+	<!-- Photo Library — for uploading meal photos -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>MacroDay needs access to your photo library so you can upload meal photos for nutrition tracking.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>MacroDay may save meal analysis results to your photo library.</string>
+
+	<!-- Health / HealthKit — for step tracking -->
+	<key>NSHealthShareUsageDescription</key>
+	<string>MacroDay reads your daily step count from Apple Health to track your activity alongside your nutrition goals.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>MacroDay can write nutrition and activity data to Apple Health for a complete health picture.</string>
+
+	<!-- Location — optional, for local restaurant suggestions (future) -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>MacroDay can suggest nearby healthy restaurants based on your location.</string>
+
+	<!-- Notifications — for meal reminders and streak alerts -->
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>MacroDay sends gentle reminders to log your meals and celebrate your streaks.</string>
+
+	<!-- Face ID (if used for biometric auth in future) -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>MacroDay can use Face ID for quick and secure sign-in.</string>
+
+	<!-- UI Configuration -->
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>armv7</string>
-	</array>
+
+	<!-- Portrait only — nutrition app doesn't need landscape -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+
+	<!-- Required device capabilities -->
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+
+	<!-- Status bar -->
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleLightContent</string>
+
+	<!-- Allow loading from Vercel (HTTPS only, no ATS exceptions needed) -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+	</dict>
+
+	<!-- Background modes — for background fetch / push notifications -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>
