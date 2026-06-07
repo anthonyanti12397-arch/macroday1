@@ -5,7 +5,7 @@ import { signIn } from 'next-auth/react'
 import { saveGuestSession, saveLang } from '@/lib/storage'
 import type { GuestSession } from '@/lib/types'
 import Logo from './Logo'
-import { Mail, ArrowRight, Users, Chrome, ChevronLeft, RefreshCw, Apple, Zap, BarChart3, ShoppingCart } from 'lucide-react'
+import { Mail, ArrowRight, Users, Chrome, ChevronLeft, RefreshCw, Zap, BarChart3, ShoppingCart } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -418,15 +418,6 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         {/* ── LANDING ── */}
         {step === 'landing' && (
           <>
-            <button
-              onClick={() => signIn('apple', { callbackUrl: '/' })}
-              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-black dark:bg-black text-white text-sm font-semibold hover:bg-slate-900 transition-all"
-              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
-            >
-              <Apple size={18} />
-              <span>{lang === 'zh' ? '使用 Apple 登入' : 'Continue with Apple'}</span>
-            </button>
-
             <button
               onClick={() => signIn('google', { callbackUrl: '/' })}
               className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:border-slate-300 hover:shadow-sm transition-all"

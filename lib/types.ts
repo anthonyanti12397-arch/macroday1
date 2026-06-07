@@ -109,6 +109,9 @@ export interface CloudAppState {
   trainingHistory: TrainingRecord[]
   favorites: Meal[]
   lang: 'en' | 'zh'
+  // Daily check-ins: date (YYYY-MM-DD) → list of eaten meal types.
+  // Drives compliance history; synced cross-device via User.localState.
+  eatenMeals?: Record<string, string[]>
 }
 
 export interface MigrationPayload {

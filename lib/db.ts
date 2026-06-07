@@ -225,9 +225,20 @@ export async function syncUserLocalData(userId: string, payload: MigrationPayloa
   }
 
   if (payload.inbodyHistory.length > 0) {
+    // Dedupe incoming records: keep one per entryDate (last wins), and preserve
+    // each record's id. Preserving the id is critical — the client merges cloud
+    // + local InBody by id, so if the server regenerates ids on every sync the
+    // records never match and duplicate exponentially.
+    const byDate = new Map<string, InBodyRecord>()
+    for (const record of payload.inbodyHistory) {
+      byDate.set(record.date, record)
+    }
+    const deduped = Array.from(byDate.values())
+
     await prisma.inBodyEntry.deleteMany({ where: { userId } })
     await prisma.inBodyEntry.createMany({
-      data: payload.inbodyHistory.map((record) => ({
+      data: deduped.map((record) => ({
+        id: record.id || undefined, // preserve client id so merges stay stable
         userId,
         entryDate: record.date,
         weight: record.weight,
@@ -364,6 +375,7 @@ export async function getUserCloudSnapshot(userId: string): Promise<CloudSnapsho
       trainingHistory: localState?.trainingHistory ?? [],
       favorites: localState?.favorites ?? [],
       lang: localState?.lang === 'en' ? 'en' : 'zh',
+      eatenMeals: localState?.eatenMeals ?? {},
     },
   }
 }

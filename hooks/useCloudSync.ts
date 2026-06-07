@@ -12,17 +12,19 @@ import {
   getFavorites, replaceFavorites,
   getLang, saveLang,
   getCloudAppState,
+  getEatenMealsMap, mergeEatenMealsMap,
 } from '@/lib/storage'
 import type { CloudSnapshot, MigrationPayload } from '@/lib/types'
 
 function mergeSnapshot(cloud: CloudSnapshot): MigrationPayload {
-  // InBody: union by ID, sorted by date
+  // InBody: dedupe by date (the real unique key — one measurement per day).
+  // Cloud wins per date; add any local-only dates. Using date instead of id
+  // prevents the runaway duplication that happened when ids drifted across syncs.
   const localInBody = getInBodyHistory()
-  const cloudIds = new Set(cloud.inbodyHistory.map(r => r.id))
-  const mergedInBody = [
-    ...cloud.inbodyHistory,
-    ...localInBody.filter(r => !cloudIds.has(r.id)),
-  ].sort((a, b) => a.date.localeCompare(b.date))
+  const byDate = new Map<string, (typeof localInBody)[number]>()
+  for (const r of localInBody) byDate.set(r.date, r)
+  for (const r of cloud.inbodyHistory) byDate.set(r.date, r) // cloud overrides
+  const mergedInBody = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date))
 
   // Profile: cloud wins (has isPro / isAdFree from server); fall back to local
   const localProfile = getUserProfile()
@@ -56,6 +58,15 @@ function mergeSnapshot(cloud: CloudSnapshot): MigrationPayload {
   // Lang: local wins (user's current preference)
   const mergedLang = getLang()
 
+  // Eaten meals (daily check-ins): union by date; union meal types per date
+  const localEaten = getEatenMealsMap()
+  const cloudEaten = cloud.appState.eatenMeals ?? {}
+  const mergedEaten: Record<string, string[]> = {}
+  const allEatenDates = Array.from(new Set([...Object.keys(localEaten), ...Object.keys(cloudEaten)]))
+  for (const date of allEatenDates) {
+    mergedEaten[date] = Array.from(new Set([...(cloudEaten[date] ?? []), ...(localEaten[date] ?? [])]))
+  }
+
   return {
     inbodyHistory: mergedInBody,
     profile: mergedProfile,
@@ -66,6 +77,7 @@ function mergeSnapshot(cloud: CloudSnapshot): MigrationPayload {
       trainingHistory: mergedTraining,
       favorites: mergedFavs,
       lang: mergedLang,
+      eatenMeals: mergedEaten,
     },
   }
 }
@@ -78,6 +90,7 @@ function applyMerged(merged: MigrationPayload): void {
   replaceTrainingHistory(merged.appState?.trainingHistory ?? [])
   replaceFavorites(merged.appState?.favorites ?? [])
   saveLang(merged.appState?.lang ?? 'zh')
+  mergeEatenMealsMap(merged.appState?.eatenMeals)
 }
 
 export function useCloudSync() {

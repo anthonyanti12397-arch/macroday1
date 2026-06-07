@@ -355,6 +355,42 @@ export function toggleMealEaten(mealType: string): string[] {
   }
 }
 
+// Read every daily check-in (macroday_eaten_<date>) as a map for cloud sync.
+export function getEatenMealsMap(): Record<string, string[]> {
+  const map: Record<string, string[]> = {}
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key || !key.startsWith('macroday_eaten_')) continue
+      const date = key.slice('macroday_eaten_'.length)
+      const raw = localStorage.getItem(key)
+      if (!raw) continue
+      const eaten = JSON.parse(raw) as string[]
+      if (Array.isArray(eaten) && eaten.length > 0) map[date] = eaten
+    }
+  } catch {
+    // ignore storage failures
+  }
+  return map
+}
+
+// Write a check-in map back to localStorage (union — never wipes existing days).
+export function mergeEatenMealsMap(map: Record<string, string[]> | undefined): void {
+  if (!map) return
+  try {
+    for (const [date, eaten] of Object.entries(map)) {
+      if (!Array.isArray(eaten) || eaten.length === 0) continue
+      const key = `macroday_eaten_${date}`
+      const existingRaw = localStorage.getItem(key)
+      const existing = existingRaw ? (JSON.parse(existingRaw) as string[]) : []
+      const merged = Array.from(new Set([...existing, ...eaten]))
+      localStorage.setItem(key, JSON.stringify(merged))
+    }
+  } catch {
+    // ignore storage failures
+  }
+}
+
 export function getComplianceHistory(days = 30): Record<string, 'full' | 'partial' | 'none'> {
   const history: Record<string, 'full' | 'partial' | 'none'> = {}
   const now = new Date()
@@ -457,6 +493,7 @@ export function getCloudAppState(): CloudAppState {
     trainingHistory: getTrainingHistory(),
     favorites: getFavorites(),
     lang: getLang(),
+    eatenMeals: getEatenMealsMap(),
   }
 }
 
@@ -468,6 +505,7 @@ export function applyCloudSnapshot(snapshot: CloudSnapshot): void {
   replaceTrainingHistory(snapshot.appState.trainingHistory)
   replaceFavorites(snapshot.appState.favorites)
   saveLang(snapshot.appState.lang)
+  mergeEatenMealsMap(snapshot.appState.eatenMeals)
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
