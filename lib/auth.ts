@@ -65,7 +65,9 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  session: { strategy: 'jwt' },
+  // Explicit 30-day session lifetime. Without maxAge the JWT has no hard expiry
+  // tied to config, so a leaked token could stay valid far longer than intended.
+  session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async jwt({ token, user, account, profile, trigger }) {

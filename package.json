@@ -40,7 +40,7 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.395.0",
-    "next": "14.2.5",
+    "next": "^14.2.35",
     "next-auth": "^4.24.7",
     "openai": "^4.47.1",
     "prisma": "^6.16.2",

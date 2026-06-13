@@ -2,6 +2,22 @@ import { PROMPT_VERSION } from '@/lib/constants'
 import type { InBodyRecord, PreferredCuisine, UserProfile } from '@/lib/types'
 import { formatArrayAsString } from '@/lib/objectBuilders'
 
+/**
+ * Neutralize free-text user input before it is interpolated into an LLM prompt.
+ * Strips newlines (the main lever for "ignore previous instructions" injection),
+ * collapses whitespace, removes control chars, and hard-caps length. Use this on
+ * ANY field the user types that ends up in a system/user prompt.
+ */
+export function sanitizePromptInput(value: string | undefined | null, maxLen = 80): string {
+  if (!value) return ""
+  // Drop ALL control chars (incl. newlines) by code point — newlines are the
+  // main lever for "ignore previous instructions" prompt injection.
+  const stripped = Array.from(String(value))
+    .filter((ch) => ch.charCodeAt(0) >= 32)
+    .join("")
+  return stripped.replace(/\s{2,}/g, " ").trim().slice(0, maxLen)
+}
+
 const CUISINE_PROMPTS: Record<PreferredCuisine, string> = {
   Argentine:
     'Prioritize Argentina-friendly ingredients and dishes such as lean beef, provoleta-style cheese swaps, chimichurri, milanesa-inspired plates, empanada wrappers, mate-friendly breakfasts, and affordable supermarket ingredients.',
@@ -56,7 +72,9 @@ export function buildDailyPrompt(input: {
   isTakeoutMode?: boolean
   locationContext?: string
 }) {
-  const { inbody, profile, lang, dislikedIngredients = [], bonusCalories = 0, isTakeoutMode = false, locationContext = '' } = input
+  const { inbody, profile, lang, dislikedIngredients = [], bonusCalories = 0, isTakeoutMode = false } = input
+  // Sanitize user free-text before it reaches the prompt (prompt-injection defense)
+  const locationContext = sanitizePromptInput(input.locationContext, 120)
   const targets = calcTargets(inbody, profile.goal)
   const targetCalories = targets.targetCalories + bonusCalories
   const targetProtein = targets.targetProtein // Keep protein same, mostly want carbs/fat for bonus calories
@@ -66,7 +84,7 @@ export function buildDailyPrompt(input: {
   const preferredCuisine = profile.preferredCuisine ?? 'High Protein Classics'
   const cuisineNote = CUISINE_PROMPTS[preferredCuisine]
   const disliked = [...(profile.dislikedIngredients ?? []), ...dislikedIngredients]
-  const uniqueDisliked = Array.from(new Set(disliked.filter(Boolean)))
+  const uniqueDisliked = Array.from(new Set(disliked.filter(Boolean).map((d) => sanitizePromptInput(d, 40)).filter(Boolean)))
 
   const localeInstruction = 'All user-facing fields must be written in Traditional Chinese. Keep imagePrompt in English only. 所有餐點名稱、食材名稱、烹飪步驟必須使用繁體中文，不可出現英文食材名。'
 
@@ -151,7 +169,9 @@ export function buildSwapPrompt(input: {
   isTakeoutMode?: boolean
   locationContext?: string
 }) {
-  const { isTakeoutMode = false, locationContext = '' } = input
+  const { isTakeoutMode = false } = input
+  // Sanitize user free-text before it reaches the prompt (prompt-injection defense)
+  const locationContext = sanitizePromptInput(input.locationContext, 120)
   const { targetCalories, targetProtein } = calcTargets(input.inbody, input.profile.goal)
   const ratios = {
     breakfast: { calories: 0.25, protein: 0.25 },
@@ -159,7 +179,7 @@ export function buildSwapPrompt(input: {
     dinner: { calories: 0.35, protein: 0.35 },
   }
   const preferredCuisine = input.profile.preferredCuisine ?? 'High Protein Classics'
-  const disliked = input.profile.dislikedIngredients?.join(', ') || 'none'
+  const disliked = (input.profile.dislikedIngredients ?? []).map((d) => sanitizePromptInput(d, 40)).filter(Boolean).join(', ') || 'none'
   const mealTargetCalories = Math.round(targetCalories * ratios[input.mealType].calories)
   const mealTargetProtein = Math.round(targetProtein * ratios[input.mealType].protein)
 

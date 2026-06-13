@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import type { InBodyRecord, Meal, UserProfile } from '@/lib/types'
 import { GROK_MODEL } from '@/lib/constants'
 import { buildSwapPrompt } from '@/lib/prompts'
@@ -18,6 +20,12 @@ function fixMacros(meal: Meal): Meal {
 
 export async function POST(req: NextRequest) {
   try {
+    // Require a logged-in user — this endpoint spends paid AI tokens.
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = (await req.json()) as {
       inbody: InBodyRecord
       profile: UserProfile

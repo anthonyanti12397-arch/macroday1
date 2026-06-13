@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 async function generateWithRetry(prompt: string, retries = 1) {
   const apiKey = process.env.SILICONFLOW_API_KEY
@@ -44,6 +46,12 @@ async function generateWithRetry(prompt: string, retries = 1) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Require a logged-in user — this endpoint spends paid image-generation credits.
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { mealName, imagePrompt } = await req.json() as { mealName: string; imagePrompt?: string }
     const subject = imagePrompt?.trim() || mealName
     const prompt = `Food photo of ${subject}, overhead shot, white background, natural light, appetizing, restaurant quality`

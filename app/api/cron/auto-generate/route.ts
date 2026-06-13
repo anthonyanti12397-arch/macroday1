@@ -5,9 +5,17 @@ import type { InBodyRecord } from '@/lib/types'
 import { normalizeGoal } from '@/lib/objectBuilders'
 
 export async function GET(req: NextRequest) {
-  // Security check: Only allow if a secret matches (Vercel Cron security best practice)
+  // Security check: Only allow if a secret matches (Vercel Cron security best practice).
+  // Fail closed: if CRON_SECRET is not configured, reject everything. Otherwise an
+  // unset env var makes the comparison `Bearer ${undefined}` which a request sending
+  // the literal header "Bearer undefined" would satisfy.
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) {
+    console.error('[Cron] CRON_SECRET not configured — refusing to run')
+    return new Response('Service unavailable', { status: 503 })
+  }
   const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return new Response('Unauthorized', { status: 401 })
   }
 
