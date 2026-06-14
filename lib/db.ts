@@ -157,8 +157,9 @@ export async function getAutoGenerateUsers() {
 }
 
 export async function getLatestInBodyRecord(userId: string) {
+  // The user's OWN latest measurement (exclude client/student entries).
   return prisma.inBodyEntry.findFirst({
-    where: { userId },
+    where: { userId, clientId: null },
     orderBy: { createdAt: 'desc' }
   })
 }
@@ -235,11 +236,15 @@ export async function syncUserLocalData(userId: string, payload: MigrationPayloa
     }
     const deduped = Array.from(byDate.values())
 
-    await prisma.inBodyEntry.deleteMany({ where: { userId } })
+    // Only replace the user's OWN measurements (clientId = null). Client/student
+    // entries share this userId (the coach) but carry a clientId — they must NOT
+    // be wiped by the coach's personal localStorage sync.
+    await prisma.inBodyEntry.deleteMany({ where: { userId, clientId: null } })
     await prisma.inBodyEntry.createMany({
       data: deduped.map((record) => ({
         id: record.id || undefined, // preserve client id so merges stay stable
         userId,
+        clientId: null,
         entryDate: record.date,
         weight: record.weight,
         height: record.height,
@@ -325,7 +330,9 @@ export async function getUserCloudSnapshot(userId: string): Promise<CloudSnapsho
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
-      inbodyHistory: { orderBy: { createdAt: 'asc' } },
+      // Only the user's own measurements — client/student entries (clientId set)
+      // must not sync down into the coach's personal localStorage history.
+      inbodyHistory: { where: { clientId: null }, orderBy: { createdAt: 'asc' } },
       mealPlans: {
         where: { OR: [{ planType: 'daily' }, { planType: 'weekly' }] },
         orderBy: { createdAt: 'desc' },
@@ -652,4 +659,123 @@ export async function updateInvoiceStatus(stripeInvoiceId: string, status: strin
       paidAt,
     },
   })
+}
+
+// ---------------------------------------------------------------------------
+// Coach → Clients (PT InBody hub). coachId is always the logged-in User. Every
+// read/write verifies the client belongs to the caller to prevent one coach
+// from touching another coach's clients (IDOR).
+// ---------------------------------------------------------------------------
+
+export interface ClientInput {
+  name: string
+  contact?: string | null
+  gender?: string | null
+  notes?: string | null
+}
+
+// Measurement fields written for a client's InBody entry (from OCR + coach edit).
+export interface ClientInBodyInput {
+  entryDate: string
+  weight: number
+  height: number
+  gender: string
+  age: number
+  bodyFat?: number | null
+  skeletalMuscleMass?: number | null
+  bmr?: number | null
+  visceralFatLevel?: number | null
+  visceralFatArea?: number | null
+  bodyWater?: number | null
+  inbodyScore?: number | null
+  bmi?: number | null
+}
+
+export async function listClients(coachId: string) {
+  return prisma.client.findMany({
+    where: { coachId },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      inbodyEntries: {
+        orderBy: { entryDate: 'desc' },
+        take: 1, // latest measurement for the list thumbnail
+      },
+    },
+  })
+}
+
+export async function createClient(coachId: string, input: ClientInput) {
+  return prisma.client.create({
+    data: {
+      coachId,
+      name: input.name.trim().slice(0, 60),
+      contact: input.contact?.trim().slice(0, 120) || null,
+      gender: input.gender || null,
+      notes: input.notes?.trim().slice(0, 500) || null,
+    },
+  })
+}
+
+export async function updateClient(coachId: string, clientId: string, input: Partial<ClientInput>) {
+  // Scope the update by coachId so a foreign clientId simply updates nothing.
+  const res = await prisma.client.updateMany({
+    where: { id: clientId, coachId },
+    data: {
+      ...(input.name !== undefined ? { name: input.name.trim().slice(0, 60) } : {}),
+      ...(input.contact !== undefined ? { contact: input.contact?.trim().slice(0, 120) || null } : {}),
+      ...(input.gender !== undefined ? { gender: input.gender || null } : {}),
+      ...(input.notes !== undefined ? { notes: input.notes?.trim().slice(0, 500) || null } : {}),
+    },
+  })
+  return res.count > 0
+}
+
+export async function deleteClient(coachId: string, clientId: string) {
+  const res = await prisma.client.deleteMany({ where: { id: clientId, coachId } })
+  return res.count > 0
+}
+
+// Returns the client's InBody history, or null if the client is not the caller's.
+export async function getClientInBody(coachId: string, clientId: string) {
+  const client = await prisma.client.findFirst({ where: { id: clientId, coachId } })
+  if (!client) return null
+  const entries = await prisma.inBodyEntry.findMany({
+    where: { clientId },
+    orderBy: { entryDate: 'asc' },
+  })
+  return { client, entries }
+}
+
+// Adds a measurement to a client the caller owns. Returns the row, or null if
+// the client is not theirs.
+export async function addClientInBodyEntry(coachId: string, clientId: string, input: ClientInBodyInput) {
+  const client = await prisma.client.findFirst({ where: { id: clientId, coachId } })
+  if (!client) return null
+  return prisma.inBodyEntry.create({
+    data: {
+      userId: coachId,
+      clientId,
+      entryDate: input.entryDate,
+      weight: input.weight,
+      height: input.height,
+      gender: input.gender,
+      age: input.age,
+      bodyFat: input.bodyFat ?? null,
+      skeletalMuscleMass: input.skeletalMuscleMass ?? null,
+      bmr: input.bmr ?? null,
+      visceralFatLevel: input.visceralFatLevel ?? null,
+      visceralFatArea: input.visceralFatArea ?? null,
+      bodyWater: input.bodyWater ?? null,
+      inbodyScore: input.inbodyScore ?? null,
+      bmi: input.bmi ?? null,
+    },
+  })
+}
+
+export async function deleteClientInBodyEntry(coachId: string, clientId: string, entryId: string) {
+  // entryId must belong to a client owned by the caller.
+  const client = await prisma.client.findFirst({ where: { id: clientId, coachId } })
+  if (!client) return false
+  const res = await prisma.inBodyEntry.deleteMany({ where: { id: entryId, clientId } })
+  return res.count > 0
 }

@@ -46,6 +46,7 @@ model User {
   sentFriendRequests  Friendship[]         @relation("FriendRequester")
   receivedFriendRequests Friendship[]      @relation("FriendAddressee")
   stepLogs            StepLog[]
+  clients             Client[]             @relation("CoachClients")
 }
 
 model AuthAccount {
@@ -66,6 +67,11 @@ model InBodyEntry {
   id                 String   @id @default(cuid())
   userId             String
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Coach flow: when set, this measurement belongs to a coach's client, not the
+  // coach's own body. userId is always the owning coach/account. Nullable so all
+  // existing consumer self-logged entries (clientId = null) keep working.
+  clientId           String?
+  clientRel          Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   entryDate          String
   weight             Float
   height             Float
@@ -75,10 +81,31 @@ model InBodyEntry {
   skeletalMuscleMass Float?
   bmr                Float?
   visceralFatLevel   Float?
+  visceralFatArea    Float?
   bodyWater          Float?
+  inbodyScore        Float?
+  bmi                Float?
   createdAt          DateTime @default(now())
 
   @@index([userId, createdAt])
+  @@index([clientId, entryDate])
+}
+
+// A coach's student. No app account in v1 — the coach manages the record on the
+// student's behalf. coachId points at the owning User (the coach).
+model Client {
+  id            String        @id @default(cuid())
+  coachId       String
+  coach         User          @relation("CoachClients", fields: [coachId], references: [id], onDelete: Cascade)
+  name          String
+  contact       String?
+  gender        String?
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  inbodyEntries InBodyEntry[]
+
+  @@index([coachId, createdAt])
 }
 
 model MealPlan {

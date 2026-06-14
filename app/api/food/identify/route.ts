@@ -53,7 +53,7 @@ Rules:
         Authorization: `Bearer ${xaiKey}`,
       },
       body: JSON.stringify({
-        model: 'grok-2-vision-1212',
+        model: 'grok-4.3',
         messages: [
           {
             role: 'user',

@@ -44,3 +44,6 @@ scratch/
 ios/App/App/build/
 ios/App/Pods/
 .gstack/
+
+# local scratch + sample data (may contain real personal health photos)
+tmp/
