@@ -46,14 +46,25 @@ export default function TermsPage() {
           </h2>
           <p>
             {lang === 'zh'
-              ? '本 App 包含由第三方（如 OpenAI, Together AI, SiliconFlow）提供之人工智慧生成技術。生成內容之正確性及穩定性取決於該等第三方服務。'
-              : 'This app utilizes AI generation technologies provided by third parties (e.g., OpenAI, Together AI, SiliconFlow). Content accuracy depends on these third-party services.'}
+              ? '本 App 包含由第三方提供之人工智慧生成與辨識技術，包括 xAI (Grok)、Anthropic (Claude)、Together AI 與 SiliconFlow。生成內容之正確性及穩定性取決於該等第三方服務。'
+              : 'This app uses AI generation and recognition technologies provided by third parties, including xAI (Grok), Anthropic (Claude), Together AI, and SiliconFlow. Content accuracy and availability depend on these third-party services.'}
           </p>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-black text-slate-800 dark:text-white">
-            {lang === 'zh' ? '3. 智慧財產權' : '3. Intellectual Property'}
+            {lang === 'zh' ? '3. 教練與學生數據（重要）' : '3. Coaches & Client Data (Important)'}
+          </h2>
+          <p>
+            {lang === 'zh'
+              ? '若您以健身教練身分使用本 App 管理學生的 InBody 或身體數據，您聲明並保證：(a) 您在輸入任何學生的個人健康數據前，已取得該學生的明確同意；(b) 您有合法權限代其儲存與處理該等數據；(c) 您將僅為向該學生提供訓練/營養服務之目的使用這些數據。對於未經學生同意而輸入其數據所引起的任何索賠或責任，您同意賠償並使 MacroDay 免責。我們僅作為您的數據處理者，代您儲存與處理學生數據。'
+              : 'If you use this app as a fitness coach to manage your clients’ InBody or body data, you represent and warrant that: (a) you have obtained each client’s explicit consent before entering their personal health data; (b) you have lawful authority to store and process that data on their behalf; and (c) you will use it solely to provide training/nutrition services to that client. You agree to indemnify and hold MacroDay harmless from any claim arising from entering a client’s data without their consent. We act only as your data processor for client data you enter.'}
+          </p>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-black text-slate-800 dark:text-white">
+            {lang === 'zh' ? '4. 智慧財產權' : '4. Intellectual Property'}
           </h2>
           <p>
             {lang === 'zh'
@@ -63,7 +74,7 @@ export default function TermsPage() {
         </section>
 
         <footer className="pt-6 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 text-center uppercase tracking-widest font-bold">
-          Updated: 2026-04-12
+          Updated: 2026-06-14
         </footer>
       </div>
     </div>

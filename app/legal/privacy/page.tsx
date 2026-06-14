@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, ShieldCheck } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 
-const LAST_UPDATED = '2026-06-13'
+const LAST_UPDATED = '2026-06-14'
 const CONTACT_EMAIL = 'privacy@marco-day.com'
 
 export default function PrivacyPage() {
@@ -133,6 +133,13 @@ export default function PrivacyPage() {
           {zh
             ? '若您使用社群論壇、好友或排行榜功能，您的顯示名稱、頭像、貼文內容、達標記錄與步數可能對其他用戶可見。請勿在公開貼文中分享您不願公開的敏感資料。'
             : 'If you use the community forum, friends, or leaderboard features, your display name, avatar, post content, check-in records, and step counts may be visible to other users. Do not share sensitive data you wish to keep private in public posts.'}
+        </Section>
+
+        {/* 6b. Coach-managed client data */}
+        <Section title={zh ? '6.5 教練代管的學生數據' : '6.5 Coach-Managed Client Data'}>
+          {zh
+            ? '若您以健身教練身分使用 MacroDay 管理學生資料，您可代學生輸入並儲存其 InBody 與身體數據（包括拍照辨識的數值）。這些數據僅與您（教練）的帳號關聯，其他用戶無法存取。就此類數據，您是「資料控制者」，MacroDay 僅作為「資料處理者」代您儲存與處理。您必須在輸入任何學生數據前取得該學生的明確同意，並負責回應學生對其數據的查閱或刪除要求（您可在 App 內刪除學生及其全部記錄，或來信請我們協助）。詳見使用者條款第 3 條。'
+            : 'If you use MacroDay as a fitness coach, you may enter and store your clients’ InBody and body data (including values read from photos) on their behalf. This data is linked only to your (the coach’s) account and is not accessible to other users. For such data you are the “data controller” and MacroDay acts only as a “data processor” storing and processing it for you. You must obtain each client’s explicit consent before entering their data, and you are responsible for handling their access or deletion requests (you can delete a client and all their records in-app, or email us for help). See Terms of Service section 3.'}
         </Section>
 
         {/* 7. Retention */}

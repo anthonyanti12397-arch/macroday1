@@ -42,12 +42,12 @@ export default function DisclaimerPage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-black text-slate-800 dark:text-white">
-            {lang === 'zh' ? '2. 精確度限制' : '2. Accuracy Limits'}
+            {lang === 'zh' ? '2. 精確度限制（含拍照辨識）' : '2. Accuracy Limits (incl. Photo Scanning)'}
           </h2>
           <p>
             {lang === 'zh'
-              ? '雖然我們努力提供準確的營養數據，但 AI 生成的內容可能存在誤差。食物的營養成分會因產地、烹飪方式及份量估算而有所不同。請用戶在執行任何飲食計畫前，務必根據自身體質進行判斷。'
-              : 'While we strive to provide accurate nutritional data, AI-generated content may contain errors. Nutrient composition vary by origin, cooking method, and portion estimation. Users must exercise their own judgment based on their physical condition.'}
+              ? '雖然我們努力提供準確的營養數據，但 AI 生成的內容可能存在誤差。食物的營養成分會因產地、烹飪方式及份量估算而有所不同。此外，「拍照匯入 InBody」功能以 AI 辨識紙本數值，可能讀取錯誤——儲存前請務必核對確認畫面上的每一項數字。請用戶在執行任何飲食計畫前，務必根據自身體質進行判斷。'
+              : 'While we strive to provide accurate nutritional data, AI-generated content may contain errors. Nutrient composition varies by origin, cooking method, and portion estimation. The “Import InBody by photo” feature uses AI to read printed values and may misread them — always verify every number on the confirmation screen before saving. Users must exercise their own judgment based on their physical condition.'}
           </p>
         </section>
 
@@ -63,7 +63,7 @@ export default function DisclaimerPage() {
         </section>
 
         <footer className="pt-6 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 text-center uppercase tracking-widest font-bold">
-          Updated: 2026-04-12
+          Updated: 2026-06-14
         </footer>
       </div>
     </div>

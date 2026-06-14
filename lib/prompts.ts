@@ -37,6 +37,43 @@ function estimateBMR(r: InBodyRecord): number {
   return Math.round(r.gender === 'male' ? base + 5 : base - 161)
 }
 
+/**
+ * Turn the user's actual InBody numbers into a body-composition briefing the
+ * model can act on — not just BMR. Gives the LLM the real stats plus a few
+ * coach-style interpretation hints so meals are tailored to this body, not a
+ * generic profile. All hints are framed as guidance, never medical claims.
+ */
+function describeBodyComposition(r: InBodyRecord, goal: UserProfile['goal']): string {
+  const lines: string[] = []
+  lines.push(`- Stats: ${r.gender}, ${r.age}y, ${r.weight}kg, ${r.height}cm.`)
+
+  if (r.bodyFat != null) {
+    const high = r.gender === 'male' ? r.bodyFat >= 22 : r.bodyFat >= 32
+    const lean = r.gender === 'male' ? r.bodyFat <= 12 : r.bodyFat <= 20
+    lines.push(
+      `- Body fat: ${r.bodyFat}%` +
+        (high ? ' (on the higher side — favour high-satiety, high-fibre, lower-glycaemic choices and keep added sugar/refined carbs modest).'
+          : lean ? ' (already lean — protect muscle with ample protein and enough carbs around activity).'
+            : ' (mid-range — keep a balanced plate).')
+    )
+  }
+  if (r.skeletalMuscleMass != null) {
+    lines.push(`- Skeletal muscle: ${r.skeletalMuscleMass}kg (drives the protein target — distribute protein across all 3 meals, ~${Math.round((r.skeletalMuscleMass * 2) / 3)}g+ each).`)
+  }
+  if (r.visceralFatLevel != null && r.visceralFatLevel >= 10) {
+    lines.push(`- Visceral fat level ${r.visceralFatLevel} (elevated — lean toward whole foods, unsaturated fats, and fewer fried/processed items).`)
+  }
+  if (r.bmr) lines.push(`- BMR: ${r.bmr} kcal.`)
+
+  const goalLine = {
+    fat_loss: 'Goal fat-loss: keep a gentle deficit, prioritise protein + volume so meals stay filling.',
+    muscle_gain: 'Goal muscle-gain: slight surplus, protein-forward, carbs around training.',
+    maintain: 'Goal maintain: balanced macros, steady energy.',
+  }[goal]
+  lines.push(`- ${goalLine}`)
+  return lines.join('\n')
+}
+
 function calcTargets(inbody: InBodyRecord, goal: UserProfile['goal']) {
   const bmr = estimateBMR(inbody)
   const muscle = inbody.skeletalMuscleMass
@@ -124,6 +161,10 @@ TAKEOUT MODE ACTIVE (CRITICAL):
 
 Goal: ${profile.goal}
 Targets: ${targetCalories} kcal and ${targetProtein}g protein
+
+BODY COMPOSITION (tailor today's meals to THIS body, not a generic profile):
+${describeBodyComposition(inbody, profile.goal)}
+
 Preferred cuisine: ${preferredCuisine}
 Cuisine strategy: ${cuisineNote}
 Dietary restrictions: ${restrictions}
@@ -135,9 +176,8 @@ ${replacementHint}
 ${takeoutPrompt}
 
 COACH PERSONA (CRITICAL):
-- Based on the user's InBody data (goal: ${profile.goal}, bmr: ${targets.targetCalories}), provide a "coachOpinion".
-- This is a 1-sentence supportive, expert insight in Traditional Chinese.
-- Explain WHY these meals were selected for today's physical state.
+- Provide a "coachOpinion": 1 sentence, Traditional Chinese, supportive + expert.
+- Reference the user's ACTUAL body composition above (e.g. their body-fat % or muscle mass) and explain WHY today's meals fit their ${profile.goal} goal — not a generic platitude.
 - Keep it at the end of the JSON.
 
 Requirements:
