@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
-export const maxDuration = 30
+export const maxDuration = 60 // vision call is slow; give it headroom (see inbody/analyze)
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)

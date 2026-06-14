@@ -39,12 +39,34 @@ function s(v: number | null | undefined): string {
   return v === null || v === undefined ? '' : String(v)
 }
 
-async function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
-  const buf = await file.arrayBuffer()
-  let binary = ''
-  const bytes = new Uint8Array(buf)
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
-  return { base64: btoa(binary), mimeType: file.type || 'image/jpeg' }
+// Downscale + re-encode the photo before upload. A full-res phone photo (3–5 MB)
+// makes both the upload and the vision call slow enough to hit serverless
+// timeouts; InBody text stays perfectly readable at ~1600px. Falls back to the
+// raw file if canvas decoding fails for any reason.
+async function fileToBase64(file: File, maxDim = 1600, quality = 0.85): Promise<{ base64: string; mimeType: string }> {
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height))
+    const w = Math.round(bitmap.width * scale)
+    const h = Math.round(bitmap.height * scale)
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('no 2d context')
+    ctx.drawImage(bitmap, 0, 0, w, h)
+    const dataUrl = canvas.toDataURL('image/jpeg', quality)
+    const base64 = dataUrl.split(',')[1]
+    if (!base64) throw new Error('encode failed')
+    return { base64, mimeType: 'image/jpeg' }
+  } catch {
+    // Fallback: send the original bytes.
+    const buf = await file.arrayBuffer()
+    let binary = ''
+    const bytes = new Uint8Array(buf)
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+    return { base64: btoa(binary), mimeType: file.type || 'image/jpeg' }
+  }
 }
 
 export default function InBodyPhotoImport({ subjectName, defaultGender = 'male', onConfirm, onClose }: Props) {
@@ -74,7 +96,13 @@ export default function InBodyPhotoImport({ subjectName, defaultGender = 'male',
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || `HTTP ${res.status}`)
+        // Surface the cause so failures are diagnosable (504 = timeout, 401 =
+        // not signed in, 502 = vision upstream, etc.).
+        const detail =
+          res.status === 401 ? (zh ? '請先登入' : 'please sign in')
+            : res.status === 504 || res.status === 408 ? (zh ? '伺服器逾時，請重試' : 'server timeout, retry')
+              : err.error || `HTTP ${res.status}`
+        throw new Error(detail)
       }
       const r = (await res.json()) as InBodyOcrResult
       setFields({
@@ -91,7 +119,8 @@ export default function InBodyPhotoImport({ subjectName, defaultGender = 'male',
       setStage('confirm')
     } catch (err) {
       console.error(err)
-      toast.error(zh ? '讀取失敗，請重拍或手動輸入' : 'Could not read the sheet — retake or enter manually')
+      const msg = err instanceof Error ? err.message : ''
+      toast.error((zh ? '讀取失敗：' : 'Read failed: ') + (msg || (zh ? '請重拍或手動輸入' : 'retake or enter manually')))
       setStage('pick')
     } finally {
       if (fileRef.current) fileRef.current.value = ''
@@ -150,6 +179,15 @@ export default function InBodyPhotoImport({ subjectName, defaultGender = 'male',
               <p className="text-xs text-slate-400 px-8 text-center">
                 {zh ? 'AI 會自動讀取數值，你只需確認後儲存' : 'AI reads the values — you just confirm and save'}
               </p>
+            </button>
+          )}
+
+          {stage === 'pick' && (
+            <button
+              onClick={() => { setWarnings([]); setConfidence(null); setStage('confirm') }}
+              className="mt-3 w-full text-center text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-[#0F9E75] transition-colors py-2"
+            >
+              {zh ? '或手動輸入數值 →' : 'Or enter values manually →'}
             </button>
           )}
 

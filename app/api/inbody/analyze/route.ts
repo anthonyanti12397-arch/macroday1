@@ -3,7 +3,10 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { INBODY_OCR_PROMPT } from '@/lib/inbody-ocr'
 
-export const maxDuration = 30
+// Vision OCR takes ~8-10s; give it headroom. On Hobby this is honoured when
+// Fluid Compute is enabled (up to 60s), otherwise capped — the client now
+// surfaces a clear timeout message and offers manual entry as a fallback.
+export const maxDuration = 60
 
 // OCR an InBody printout photo → structured fields for the coach-confirmation
 // screen. Uses Grok vision (same path as /api/food/identify) so it shares the
