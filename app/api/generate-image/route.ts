@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 
 // FLUX image generation + retry can exceed Vercel's 10s default. Give it headroom.
 export const maxDuration = 60
@@ -49,14 +46,14 @@ async function generateWithRetry(prompt: string, retries = 1) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Require a logged-in user — this endpoint spends paid image-generation credits.
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Guests generate meal plans too, so image generation must work without a
+    // login (this used to hard-fail 401 for guests → blank meal cards). FLUX
+    // schnell is cheap; we bound the request by validating/capping input instead.
+    const { mealName, imagePrompt } = await req.json() as { mealName?: string; imagePrompt?: string }
+    const subject = (imagePrompt?.trim() || mealName?.trim() || '').slice(0, 200)
+    if (!subject) {
+      return NextResponse.json({ error: 'mealName or imagePrompt required' }, { status: 400 })
     }
-
-    const { mealName, imagePrompt } = await req.json() as { mealName: string; imagePrompt?: string }
-    const subject = imagePrompt?.trim() || mealName
     const prompt = `Food photo of ${subject}, overhead shot, white background, natural light, appetizing, restaurant quality`
 
     const url = await generateWithRetry(prompt)
