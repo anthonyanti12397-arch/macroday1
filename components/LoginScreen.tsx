@@ -358,16 +358,6 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           {/* Animated demo card */}
           <DemoMacroCard lang={lang} />
 
-          {/* Social proof */}
-          <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
-            <div className="flex -space-x-1.5">
-              {['🧑‍💻','👩‍🍳','🧑‍🏋️','👨‍⚕️','👩‍💼'].map((e, i) => (
-                <div key={i} className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 border-2 border-white dark:border-[#0F172A] flex items-center justify-center text-[10px]">{e}</div>
-              ))}
-            </div>
-            <span>{lang === 'zh' ? '已有超過 500 人使用' : '500+ people tracking macros'}</span>
-          </div>
-
           {/* Feature pills */}
           <div className="flex flex-wrap gap-2 justify-center">
             {[
