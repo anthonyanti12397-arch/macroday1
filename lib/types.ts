@@ -1,9 +1,10 @@
 export type PreferredCuisine =
-  | 'Argentine'
-  | 'Latin American'
-  | 'Mediterranean'
-  | 'Asian'
-  | 'High Protein Classics'
+  | 'HongKong'       // 港式・茶餐廳・粵菜
+  | 'Taiwanese'      // 台式・家常・小吃
+  | 'ChineseHome'    // 中式家常
+  | 'JapaneseKorean' // 日式・韓式
+  | 'HealthyLight'   // 清淡少油・減脂
+  | 'HighProtein'    // 西式高蛋白・健身餐
 
 export interface InBodyRecord {
   id: string

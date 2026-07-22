@@ -4,6 +4,9 @@ import { generateDailyMealsInner } from '@/lib/ai-service'
 import type { InBodyRecord } from '@/lib/types'
 import { normalizeGoal } from '@/lib/objectBuilders'
 
+// Cron loops over multiple users, each an AI call. Needs well beyond the 10s default.
+export const maxDuration = 300
+
 export async function GET(req: NextRequest) {
   // Security check: Only allow if a secret matches (Vercel Cron security best practice).
   // Fail closed: if CRON_SECRET is not configured, reject everything. Otherwise an
@@ -56,7 +59,7 @@ export async function GET(req: NextRequest) {
         activityLevel: 'moderate' as const,
         dietaryRestrictions: (user.dietaryRestrictions as string[]) || [],
         dislikedIngredients: (user.dislikedIngredients as string[]) || [],
-        preferredCuisine: (user.preferredCuisine as any) || 'Asian',
+        preferredCuisine: (user.preferredCuisine as any) || 'ChineseHome',
         isPro: user.isPro,
         isAdFree: user.isAdFree,
         proteinPreferences: [] as string[],

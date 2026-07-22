@@ -60,12 +60,22 @@ const CARB_ZH: Record<string, string> = {
 }
 
 const PREFERRED_CUISINE_OPTIONS: PreferredCuisine[] = [
-  'Argentine',
-  'Latin American',
-  'Mediterranean',
-  'Asian',
-  'High Protein Classics',
+  'HongKong',
+  'Taiwanese',
+  'ChineseHome',
+  'JapaneseKorean',
+  'HealthyLight',
+  'HighProtein',
 ]
+
+const CUISINE_LABELS: Record<PreferredCuisine, string> = {
+  HongKong: '港式・茶餐廳',
+  Taiwanese: '台式・家常',
+  ChineseHome: '中式家常',
+  JapaneseKorean: '日式・韓式',
+  HealthyLight: '清淡少油',
+  HighProtein: '高蛋白・健身餐',
+}
 
 const RESTRICTION_ZH: Record<string, string> = {
   'No dairy': '無乳製品', 'No gluten': '無麩質',
@@ -96,7 +106,7 @@ export default function InBodyForm({ latestRecord, latestProfile, editingRecord,
   const [proteinPrefs, setProteinPrefs] = useState<string[]>(latestProfile?.proteinPreferences ?? [])
   const [carbPrefs, setCarbPrefs] = useState<string[]>(latestProfile?.carbPreferences ?? [])
   const [cookingStyle, setCookingStyle] = useState<UserProfile['cookingStyle']>(latestProfile?.cookingStyle ?? 'both')
-  const [preferredCuisine, setPreferredCuisine] = useState<PreferredCuisine>(latestProfile?.preferredCuisine ?? 'Argentine')
+  const [preferredCuisine, setPreferredCuisine] = useState<PreferredCuisine>(latestProfile?.preferredCuisine ?? 'ChineseHome')
   const [fitnessLevel, setFitnessLevel] = useState<NonNullable<UserProfile['fitnessLevel']>>(latestProfile?.fitnessLevel ?? 'beginner')
 
   const [error, setError] = useState('')
@@ -287,7 +297,7 @@ export default function InBodyForm({ latestRecord, latestProfile, editingRecord,
 
       {/* Cuisine preferences */}
       <div>
-        <p className="text-sm font-semibold text-zinc-700 mb-2">Preferred Cuisine</p>
+        <p className="text-sm font-semibold text-zinc-700 mb-2">{lang === 'zh' ? '偏好菜系' : 'Preferred Cuisine'}</p>
         <select
           value={preferredCuisine}
           onChange={(e) => setPreferredCuisine(e.target.value as PreferredCuisine)}
@@ -295,7 +305,7 @@ export default function InBodyForm({ latestRecord, latestProfile, editingRecord,
         >
           {PREFERRED_CUISINE_OPTIONS.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {CUISINE_LABELS[option]}
             </option>
           ))}
         </select>

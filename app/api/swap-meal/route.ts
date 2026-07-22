@@ -6,6 +6,9 @@ import type { InBodyRecord, Meal, UserProfile } from '@/lib/types'
 import { GROK_MODEL } from '@/lib/constants'
 import { buildSwapPrompt } from '@/lib/prompts'
 
+// Grok single-meal swap can exceed Vercel's 10s default under load. Give it headroom.
+export const maxDuration = 60
+
 function getClient() {
   return new OpenAI({
     apiKey: process.env.XAI_API_KEY ?? 'placeholder',

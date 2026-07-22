@@ -10,6 +10,10 @@ import { GenerateMealsSchema } from '@/lib/validations'
 import { hydrateInBodyRecord, normalizeUserProfile, formatArrayAsString } from '@/lib/objectBuilders'
 import { ZodError } from 'zod'
 
+// 7-day plan uses max_tokens 4000 and routinely takes 15-25s. Without this it hits
+// Vercel's 10s default timeout and fails intermittently. See inbody/analyze.
+export const maxDuration = 60
+
 function getClient() {
   const apiKey = process.env.XAI_API_KEY
   if (!apiKey) throw new Error('AI service is not configured. Please contact support.')

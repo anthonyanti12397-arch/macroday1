@@ -6,6 +6,9 @@ import { GROK_MODEL } from '@/lib/constants'
 import { buildTrainingPrompt } from '@/lib/prompts'
 import type { TrainingPlan } from '@/lib/types'
 
+// Grok training generation can exceed Vercel's 10s default. Give it headroom.
+export const maxDuration = 60
+
 function getClient() {
   return new OpenAI({
     apiKey: process.env.XAI_API_KEY ?? 'placeholder',

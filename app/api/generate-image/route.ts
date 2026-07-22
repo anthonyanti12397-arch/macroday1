@@ -3,6 +3,9 @@ import OpenAI from 'openai'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
+// FLUX image generation + retry can exceed Vercel's 10s default. Give it headroom.
+export const maxDuration = 60
+
 async function generateWithRetry(prompt: string, retries = 1) {
   const apiKey = process.env.SILICONFLOW_API_KEY
   if (!apiKey || apiKey === 'placeholder') {

@@ -6,6 +6,10 @@ import { generateDailyMealsInner } from '@/lib/ai-service'
 import { GenerateDailySchema } from '@/lib/validations'
 import { hydrateInBodyRecord, normalizeUserProfile } from '@/lib/objectBuilders'
 
+// Grok meal generation can take 5-12s (cold starts + model latency). Without this
+// the route inherits Vercel's 10s default and fails intermittently. See inbody/analyze.
+export const maxDuration = 60
+
 export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.json()

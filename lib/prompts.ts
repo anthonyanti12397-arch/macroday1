@@ -19,16 +19,18 @@ export function sanitizePromptInput(value: string | undefined | null, maxLen = 8
 }
 
 const CUISINE_PROMPTS: Record<PreferredCuisine, string> = {
-  Argentine:
-    'Prioritize Argentina-friendly ingredients and dishes such as lean beef, provoleta-style cheese swaps, chimichurri, milanesa-inspired plates, empanada wrappers, mate-friendly breakfasts, and affordable supermarket ingredients.',
-  'Latin American':
-    'Favor Latin American flavors and pantry logic: beans, corn, beef, chicken, rice, avocado, salsa fresca, tortillas, arepas, plantain, and grilled proteins.',
-  Mediterranean:
-    'Use Mediterranean ingredients such as olive oil, yogurt, chickpeas, seafood, herbs, tomatoes, cucumbers, and simple high-protein bowls.',
-  Asian:
-    'Favor Asian-friendly dishes with rice, noodles, tofu, stir-fries, soups, steamed proteins, and balanced sauces.',
-  'High Protein Classics':
-    'Keep meals practical and gym-friendly with simple proteins, oats, eggs, rice, potatoes, wraps, and straightforward prep.',
+  HongKong:
+    '以香港飲食為主：茶餐廳與粵菜邏輯，常用食材如雞蛋、瘦豬肉、牛肉、雞胸、白飯、通粉、菜心/芥蘭、豆腐、蒸魚。手法以蒸、灼、炒、燉為主，少油炸。食材需在香港街市與超市容易買到。',
+  Taiwanese:
+    '以台式家常與小吃為主：常用雞胸、豬里肌、蛋、糙米/白飯、地瓜、豆干、青菜、滷味。口味清爽，手法以滷、蒸、煎、炒為主。食材需在台灣超市與傳統市場容易買到。',
+  ChineseHome:
+    '以中式家常菜為主：常見蛋白如雞、豬、牛、魚、豆腐、雞蛋，搭配白飯/糙米/麵與時令蔬菜。手法以炒、蒸、燉、涼拌為主，均衡少油。',
+  JapaneseKorean:
+    '以日式與韓式健康餐為主：常用鮭魚、雞胸、蛋、豆腐、納豆、味噌、泡菜、海帶、糙米/五穀飯。手法以烤、蒸、煮、涼拌為主，低油高蛋白。',
+  HealthyLight:
+    '清淡少油、減脂導向：高纖高飽足，優先瘦肉、白肉、魚、蛋白、豆腐、大量蔬菜與全穀，控制精緻碳水與添加糖，手法以蒸、灼、烤為主。',
+  HighProtein:
+    '西式高蛋白健身餐：簡單實用，常用雞胸、牛肉、蛋、燕麥、白飯、馬鈴薯、希臘優格、捲餅，備餐容易、蛋白質充足。',
 }
 
 function estimateBMR(r: InBodyRecord): number {
@@ -118,8 +120,9 @@ export function buildDailyPrompt(input: {
   const restrictions = formatArrayAsString(profile.dietaryRestrictions, undefined, 'None')
   const proteins = formatArrayAsString(profile.proteinPreferences)
   const carbs = formatArrayAsString(profile.carbPreferences)
-  const preferredCuisine = profile.preferredCuisine ?? 'High Protein Classics'
-  const cuisineNote = CUISINE_PROMPTS[preferredCuisine]
+  const preferredCuisine = profile.preferredCuisine ?? 'ChineseHome'
+  // Guard against legacy/unknown values stored before the cuisine set changed.
+  const cuisineNote = CUISINE_PROMPTS[preferredCuisine] ?? CUISINE_PROMPTS.ChineseHome
   const disliked = [...(profile.dislikedIngredients ?? []), ...dislikedIngredients]
   const uniqueDisliked = Array.from(new Set(disliked.filter(Boolean).map((d) => sanitizePromptInput(d, 40)).filter(Boolean)))
 
@@ -147,9 +150,7 @@ TAKEOUT MODE ACTIVE (CRITICAL):
       : 'No disliked ingredients recorded yet.'
 
   const replacementHint =
-    preferredCuisine === 'Argentine' || preferredCuisine === 'Latin American'
-      ? 'When helpful, use local substitutions such as beef cuts, empanada dough, chimichurri, tortillas, beans, or supermarket staples common in Argentina/Latin America.'
-      : 'Use local supermarket-friendly substitutions when ingredients are uncommon.'
+    '若某食材在台灣/香港不常見或較貴，改用當地街市與超市容易買到的相近食材替代。'
 
   return {
     targetCalories,
@@ -218,7 +219,8 @@ export function buildSwapPrompt(input: {
     lunch: { calories: 0.4, protein: 0.4 },
     dinner: { calories: 0.35, protein: 0.35 },
   }
-  const preferredCuisine = input.profile.preferredCuisine ?? 'High Protein Classics'
+  const preferredCuisine = input.profile.preferredCuisine ?? 'ChineseHome'
+  const cuisineNote = CUISINE_PROMPTS[preferredCuisine] ?? CUISINE_PROMPTS.ChineseHome
   const disliked = (input.profile.dislikedIngredients ?? []).map((d) => sanitizePromptInput(d, 40)).filter(Boolean).join(', ') || 'none'
   const mealTargetCalories = Math.round(targetCalories * ratios[input.mealType].calories)
   const mealTargetProtein = Math.round(targetProtein * ratios[input.mealType].protein)
@@ -229,7 +231,7 @@ export function buildSwapPrompt(input: {
       'You are MacroDay, an expert sports nutrition coach. Return only valid JSON and make the meal feel locally appropriate.',
     userPrompt: `Generate a replacement ${input.mealType} that is clearly different from "${input.currentMealName}".
 Targets: ${mealTargetCalories} kcal and ${mealTargetProtein}g protein.
-Preferred cuisine: ${preferredCuisine}
+Cuisine strategy: ${cuisineNote}
 Avoid disliked ingredients: ${disliked}
 Cooking style: ${input.profile.cookingStyle}
 Language: 所有餐點名稱、食材名稱、烹飪步驟必須使用繁體中文，不可出現英文食材名。imagePrompt 保持英文。
