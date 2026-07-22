@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { PRO_PRICE_MONTHLY, PRO_TRIAL_DAYS } from '@/lib/constants'
+import { PRO_PRICE_MONTHLY, PRO_PRICE_ANNUAL, PRO_CURRENCY, PRO_TRIAL_DAYS } from '@/lib/constants'
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY
@@ -18,11 +18,13 @@ export async function POST(req: Request) {
 
   try {
     const session = await getServerSession(authOptions)
-    const { mode = 'pro', amount } = (await req.json()) as {
+    const { mode = 'pro', amount, interval = 'month' } = (await req.json()) as {
       userId?: string
       mode?: 'pro' | 'donate' | 'adfree'
       amount?: number
+      interval?: 'month' | 'year'
     }
+    const billing: 'month' | 'year' = interval === 'year' ? 'year' : 'month'
 
     // 要求身份验证 (除了捐赠模式外)
     if (mode !== 'donate' && !session?.user?.id) {
@@ -64,23 +66,41 @@ export async function POST(req: Request) {
     }
 
     let lineItem: any
-    const priceId = mode === 'adfree' ? process.env.STRIPE_ADFREE_PRICE_ID : process.env.STRIPE_PRO_PRICE_ID
+    const isAdFree = mode === 'adfree'
+    // Prefer pre-created Stripe price IDs when configured; otherwise fall back to
+    // inline price_data so pricing works without any Stripe dashboard setup.
+    const priceId = isAdFree
+      ? process.env.STRIPE_ADFREE_PRICE_ID
+      : billing === 'year'
+        ? process.env.STRIPE_PRO_ANNUAL_PRICE_ID
+        : process.env.STRIPE_PRO_PRICE_ID
 
     if (priceId) {
       lineItem = { price: priceId, quantity: 1 }
-    } else {
-      const isAdFree = mode === 'adfree'
+    } else if (isAdFree) {
       lineItem = {
         price_data: {
-          currency: isAdFree ? 'hkd' : 'usd',
+          currency: 'usd',
           product_data: {
-            name: isAdFree ? 'MacroDay Ad-Free' : 'MacroDay Pro',
-            description: isAdFree 
-              ? 'Permanently remove all display ads while keeping rewarded rewards.'
-              : 'Regional meal plans, cloud sync, forum posting, and unlimited AI swaps.',
+            name: 'MacroDay Ad-Free',
+            description: 'Remove all display ads while keeping rewarded quota.',
           },
           recurring: { interval: 'month' as const },
-          unit_amount: isAdFree ? 800 : (PRO_PRICE_MONTHLY * 100),
+          unit_amount: PRO_PRICE_MONTHLY * 100,
+        },
+        quantity: 1,
+      }
+    } else {
+      // Plus tier — monthly or annual.
+      lineItem = {
+        price_data: {
+          currency: PRO_CURRENCY,
+          product_data: {
+            name: 'MacroDay Plus',
+            description: 'No ads, higher daily limit, cloud sync, community, unlimited swaps, weekly plans.',
+          },
+          recurring: { interval: billing },
+          unit_amount: (billing === 'year' ? PRO_PRICE_ANNUAL : PRO_PRICE_MONTHLY) * 100,
         },
         quantity: 1,
       }

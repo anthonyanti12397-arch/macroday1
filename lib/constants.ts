@@ -4,7 +4,11 @@ export const MAX_AD_REWARDS_PER_DAY = 5
 // Fair-use ceiling for paid users — keeps API cost bounded against abuse while
 // staying high enough to feel unlimited for normal use.
 export const PRO_DAILY_CAP = 20
-export const PRO_PRICE_MONTHLY = 8 // HKD per month
+// Plus tier pricing (USD). Annual is ~2 months free vs monthly, and amortizes
+// Stripe's fixed per-charge fee (which is brutal on a $2 monthly charge).
+export const PRO_PRICE_MONTHLY = 2   // USD / month
+export const PRO_PRICE_ANNUAL = 20   // USD / year
+export const PRO_CURRENCY = 'usd'
 export const APP_NAME = 'MacroDay'
 export const APP_NAME_ZH = '每日燃'
 // grok-4 quality without the slow reasoning chain — benchmarked at ~3s for meal
