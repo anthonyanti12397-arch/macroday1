@@ -54,7 +54,7 @@ export default function Logo({ lang = 'en', size = 'md', className = '', iconOnl
   return (
     <div className={`flex items-center ${config.gap} ${className}`}>
       <LogoIcon size={config.iconSize} />
-      <span className={`tracking-tight ${variant === 'white' ? 'text-white' : 'text-slate-900'} ${config.textClass}`}>
+      <span className={`tracking-tight ${variant === 'white' ? 'text-white' : 'text-slate-900 dark:text-white'} ${config.textClass}`}>
         {lang === 'zh' ? APP_NAME_ZH : APP_NAME}
       </span>
     </div>
