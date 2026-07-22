@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getTodayUsage } from '@/lib/storage'
-import { FREE_DAILY_LIMIT, BETA_MODE } from '@/lib/constants'
+import { FREE_DAILY_LIMIT, BETA_MODE, MAX_AD_REWARDS_PER_DAY } from '@/lib/constants'
 import Link from 'next/link'
 import { Zap, Sparkles, PlayCircle } from 'lucide-react'
 import RewardedAdModal from './RewardedAdModal'
@@ -41,7 +41,7 @@ export default function UsageCounter() {
     )
   }
 
-  const currentLimit = FREE_DAILY_LIMIT + adRewards
+  const currentLimit = FREE_DAILY_LIMIT + Math.min(adRewards, MAX_AD_REWARDS_PER_DAY)
   const atLimit = count >= currentLimit
   const pct = Math.min(100, (count / currentLimit) * 100)
 
@@ -68,7 +68,7 @@ export default function UsageCounter() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {atLimit && adRewards < 5 && (
+          {atLimit && adRewards < MAX_AD_REWARDS_PER_DAY && (
             <button 
               onClick={(e) => { e.preventDefault(); setShowAd(true); }}
               className="flex items-center gap-1 text-[10px] font-bold text-[#0F9E75] bg-[#E8F5F0] hover:bg-[#D1EBE1] transition-colors px-2.5 py-1.5 rounded-lg"

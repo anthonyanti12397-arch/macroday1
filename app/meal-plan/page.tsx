@@ -283,7 +283,8 @@ export default function MealPlanPage() {
     const currentInbody = getLatestInBody()
     if (!currentInbody || !currentProfile) return
 
-    if (!canGenerateDaily({ isPro: currentProfile.isPro, dailyUsageCount: getTodayUsage().count })) {
+    const usageNow = getTodayUsage()
+    if (!canGenerateDaily({ isPro: currentProfile.isPro, dailyUsageCount: usageNow.count, adRewards: usageNow.adRewards })) {
       setShowUpgrade(true)
       return
     }

@@ -1,4 +1,4 @@
-import { BETA_MODE, FREE_DAILY_LIMIT } from '@/lib/constants'
+import { BETA_MODE, FREE_DAILY_LIMIT, MAX_AD_REWARDS_PER_DAY, PRO_DAILY_CAP } from '@/lib/constants'
 
 export type ProFeature =
   | 'weekly-plan'
@@ -13,6 +13,8 @@ export interface GateContext {
   isPro?: boolean
   hasAdFree?: boolean
   dailyUsageCount?: number
+  /** Extra generations earned today by watching rewarded ads. */
+  adRewards?: number
 }
 
 export function isProUser(isPro?: boolean): boolean {
@@ -39,8 +41,13 @@ export function canUseFeature(feature: ProFeature, context: GateContext = {}): b
 }
 
 export function canGenerateDaily(context: GateContext = {}): boolean {
-  if (isProUser(context.isPro)) return true
-  return (context.dailyUsageCount ?? 0) < FREE_DAILY_LIMIT
+  if (BETA_MODE) return true
+  const used = context.dailyUsageCount ?? 0
+  // Paid users: effectively unlimited, but capped for fair use / API-cost control.
+  if (isProUser(context.isPro)) return used < PRO_DAILY_CAP
+  // Free users: base quota + generations earned by watching rewarded ads (capped).
+  const earned = Math.min(context.adRewards ?? 0, MAX_AD_REWARDS_PER_DAY)
+  return used < FREE_DAILY_LIMIT + earned
 }
 
 export function shouldShowBannerAds(context: GateContext = {}): boolean {
