@@ -47,9 +47,11 @@ export async function generateDailyMealsInner(args: {
   estimatedCaloriesBurned?: number
   isTakeoutMode?: boolean
   locationContext?: string
+  recentMeals?: string[]
+  weightTrend?: string
 }): Promise<DailyMeals> {
-  const { inbody, profile, lang = 'zh', hasTraining, estimatedCaloriesBurned, isTakeoutMode = false, locationContext = '' } = args
-  
+  const { inbody, profile, lang = 'zh', hasTraining, estimatedCaloriesBurned, isTakeoutMode = false, locationContext = '', recentMeals = [], weightTrend = '' } = args
+
   const prompt = buildDailyPrompt({
     inbody,
     profile,
@@ -57,7 +59,9 @@ export async function generateDailyMealsInner(args: {
     dislikedIngredients: profile.dislikedIngredients,
     bonusCalories: hasTraining ? (estimatedCaloriesBurned || 300) : 0,
     isTakeoutMode,
-    locationContext
+    locationContext,
+    recentMeals,
+    weightTrend
   })
 
   // 1. Try pool match first

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    const { inbody, profile, lang = 'zh', hasTraining, estimatedCaloriesBurned, isTakeoutMode = false, locationContext = '' } = validation.data
+    const { inbody, profile, lang = 'zh', hasTraining, estimatedCaloriesBurned, isTakeoutMode = false, locationContext = '', recentMeals = [], weightTrend = '' } = validation.data
     const session = await getServerSession(authOptions)
     const isAuthed = !!session?.user?.id
 
@@ -36,7 +36,9 @@ export async function POST(req: NextRequest) {
       hasTraining,
       estimatedCaloriesBurned,
       isTakeoutMode,
-      locationContext
+      locationContext,
+      recentMeals,
+      weightTrend
     })
 
     if (isAuthed) {

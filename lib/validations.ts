@@ -39,4 +39,8 @@ export const GenerateDailySchema = z.object({
   estimatedCaloriesBurned: z.number().optional(),
   isTakeoutMode: z.boolean().optional().default(false),
   locationContext: z.string().optional().default(''),
+  // Recent meal names to avoid repeating (day-over-day variety)
+  recentMeals: z.array(z.string()).optional().default([]),
+  // Compact weight-trend summary from InBody history (e.g. "78kg -> 75kg over 5 measurements")
+  weightTrend: z.string().optional().default(''),
 })

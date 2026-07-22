@@ -6,12 +6,13 @@ import Link from 'next/link'
 import { RefreshCw, UtensilsCrossed, Heart, Clock, MapPin, ShoppingBag, Share2 } from 'lucide-react'
 import Image from 'next/image'
 import {
-  getLatestInBody, getUserProfile,
+  getLatestInBody, getUserProfile, getInBodyHistory,
   saveWeeklyPlan, getLatestWeeklyPlan,
   saveDailyMeals, getTodayDailyMeals, updateMealImage,
   incrementUsage, getTodayUsage,
   saveToStatsCache, getFromStatsCache,
   getFavorites, addDislikedIngredients,
+  getRecentMealNames, pushRecentMealNames,
 } from '@/lib/storage'
 import { generateStatsHash, getMemoryCache, setMemoryCache } from '@/lib/cache'
 import type { InBodyRecord, UserProfile, WeeklyPlan, DailyMeals, Meal } from '@/lib/types'
@@ -44,6 +45,24 @@ async function fetchImage(mealName: string, imagePrompt?: string): Promise<strin
     return data.url ?? null
   } catch {
     return null
+  }
+}
+
+// Compact weight-trend summary from InBody history, fed to the meal prompt so
+// the AI can nudge calories toward the user's actual trajectory.
+function computeWeightTrend(): string {
+  try {
+    const history = getInBodyHistory()
+    if (history.length < 2) return ''
+    const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date))
+    const first = sorted[0]
+    const last = sorted[sorted.length - 1]
+    const delta = Math.round((last.weight - first.weight) * 10) / 10
+    if (Math.abs(delta) < 0.3) return `stable around ${last.weight}kg over ${sorted.length} measurements`
+    const dir = delta < 0 ? 'down' : 'up'
+    return `${first.weight}kg -> ${last.weight}kg over ${sorted.length} measurements (${dir} ${Math.abs(delta)}kg)`
+  } catch {
+    return ''
   }
 }
 
@@ -305,17 +324,20 @@ export default function MealPlanPage() {
     const promise = fetch('/api/generate-daily', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        inbody: currentInbody, 
-        profile: currentProfile, 
+      body: JSON.stringify({
+        inbody: currentInbody,
+        profile: currentProfile,
         lang,
         isTakeoutMode,
-        locationContext
+        locationContext,
+        recentMeals: getRecentMealNames(),
+        weightTrend: computeWeightTrend(),
       }),
     }).then(async res => {
       const data = await res.json() as DailyMeals | { error: string }
       if ('error' in data) throw new Error(data.error)
       saveDailyMeals(data)
+      pushRecentMealNames([data.breakfast?.name, data.lunch?.name, data.dinner?.name])
       saveToStatsCache(cacheHash + '_daily', data)
       setMemoryCache(cacheHash + '_daily', data)
       setDailyMeals(data)

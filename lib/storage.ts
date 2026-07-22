@@ -256,6 +256,44 @@ export function updateMealImage(mealType: 'breakfast' | 'lunch' | 'dinner', imag
   }
 }
 
+// ── Recent Meal Names ──────────────────────────────────────────────────────────
+// Rolling list of recently-generated meal names so the AI can avoid repeating
+// the same dishes day over day. Newest first, deduped, capped at ~6 days x 3 meals.
+
+const RECENT_MEALS_KEY = 'macroday_recent_meals'
+const RECENT_MEALS_CAP = 18
+
+export function getRecentMealNames(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_MEALS_KEY)
+    if (!raw) return []
+    const list = JSON.parse(raw) as string[]
+    return Array.isArray(list) ? list : []
+  } catch {
+    return []
+  }
+}
+
+export function pushRecentMealNames(names: (string | undefined)[]): void {
+  try {
+    const clean = names.map((n) => n?.trim()).filter((n): n is string => !!n)
+    if (clean.length === 0) return
+    // newest first, dedupe (case-insensitive), cap
+    const seen = new Set<string>()
+    const merged: string[] = []
+    for (const n of [...clean, ...getRecentMealNames()]) {
+      const key = n.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      merged.push(n)
+      if (merged.length >= RECENT_MEALS_CAP) break
+    }
+    localStorage.setItem(RECENT_MEALS_KEY, JSON.stringify(merged))
+  } catch {
+    // SSR or storage unavailable
+  }
+}
+
 // ── Cache by Stats Hash ────────────────────────────────────────────────────────
 // This cache allows instant retrieval if the user's InBody/Profile haven't changed.
 

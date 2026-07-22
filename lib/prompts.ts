@@ -110,8 +110,10 @@ export function buildDailyPrompt(input: {
   bonusCalories?: number
   isTakeoutMode?: boolean
   locationContext?: string
+  recentMeals?: string[]
+  weightTrend?: string
 }) {
-  const { inbody, profile, lang, dislikedIngredients = [], bonusCalories = 0, isTakeoutMode = false } = input
+  const { inbody, profile, lang, dislikedIngredients = [], bonusCalories = 0, isTakeoutMode = false, recentMeals = [], weightTrend = '' } = input
   // Sanitize user free-text before it reaches the prompt (prompt-injection defense)
   const locationContext = sanitizePromptInput(input.locationContext, 120)
   const targets = calcTargets(inbody, profile.goal)
@@ -152,6 +154,21 @@ TAKEOUT MODE ACTIVE (CRITICAL):
   const replacementHint =
     '若某食材在台灣/香港不常見或較貴，改用當地街市與超市容易買到的相近食材替代。'
 
+  // Day-over-day variety: avoid repeating dishes the user recently had.
+  const uniqueRecent = Array.from(
+    new Set(recentMeals.map((m) => sanitizePromptInput(m, 40)).filter(Boolean))
+  ).slice(0, 15)
+  const varietyInstruction =
+    uniqueRecent.length > 0
+      ? `VARIETY (avoid repetition): The user recently had these dishes — do NOT repeat them, choose clearly different mains and flavor profiles: ${uniqueRecent.join('、')}.`
+      : ''
+
+  // Weight trend from InBody history — lets the model adjust calories dynamically.
+  const trend = sanitizePromptInput(weightTrend, 120)
+  const trendLine = trend
+    ? `Recent weight trend: ${trend}. Nudge today's calories/macros to keep this trend on track for the ${profile.goal} goal.`
+    : ''
+
   return {
     targetCalories,
     targetProtein,
@@ -165,6 +182,7 @@ Targets: ${targetCalories} kcal and ${targetProtein}g protein
 
 BODY COMPOSITION (tailor today's meals to THIS body, not a generic profile):
 ${describeBodyComposition(inbody, profile.goal)}
+${trendLine}
 
 Preferred cuisine: ${preferredCuisine}
 Cuisine strategy: ${cuisineNote}
@@ -174,6 +192,7 @@ Carb preferences: ${carbs}
 Cooking style: ${profile.cookingStyle}. ${cookingInstruction}
 ${dislikeInstruction}
 ${replacementHint}
+${varietyInstruction}
 ${takeoutPrompt}
 
 COACH PERSONA (CRITICAL):
