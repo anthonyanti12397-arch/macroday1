@@ -7,6 +7,7 @@ import type { GuestSession } from '@/lib/types'
 import Logo from './Logo'
 import { Mail, ArrowRight, Users, Chrome, ChevronLeft, RefreshCw, Zap, BarChart3, ShoppingCart } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useLang } from '@/contexts/LangContext'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface LoginScreenProps {
@@ -117,8 +118,10 @@ function DemoMacroCard({ lang }: { lang: 'en' | 'zh' }) {
 
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const { isDark } = useTheme()
-  const systemLang = typeof navigator !== 'undefined' && navigator.language.startsWith('zh') ? 'zh' : 'en'
-  const [lang, setLang] = useState<'en' | 'zh'>(systemLang)
+  // Use the shared language context so the login screen matches the rest of the
+  // app (was navigator-based, which showed English on en-locale browsers while
+  // the app defaulted to Chinese). Target audience is Taiwan/HK → default zh.
+  const { lang, setLang } = useLang()
   const [step, setStep] = useState<Step>('landing')
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState('')
