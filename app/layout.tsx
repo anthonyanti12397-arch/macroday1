@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
-import { APP_NAME } from '@/lib/constants'
+import { APP_NAME, ADSENSE_CLIENT_ID } from '@/lib/constants'
 import Providers from '@/components/Providers'
 import ClientSideInit from '@/components/ClientSideInit'
 
@@ -39,8 +40,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="zh-Hant">
       <body className={`${inter.className} min-h-screen antialiased`}>
+        {ADSENSE_CLIENT_ID && (
+          <Script
+            id="adsbygoogle-init"
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
+          />
+        )}
         <Providers>
           <ClientSideInit />
           {children}

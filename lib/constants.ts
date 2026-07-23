@@ -20,3 +20,10 @@ export const PRO_TRIAL_DAYS = 14
 
 // Phase 4: Pro gating is live.
 export const BETA_MODE = false
+
+// Google AdSense (web banner ads). The publisher account already exists; set the
+// banner ad-unit slot id to actually serve ads. Until a slot is set, AdBanner
+// renders a dev placeholder. Rewarded video (watch-ad-for-quota) is not real on
+// web — it needs AdMob in the native (Capacitor) app.
+export const ADSENSE_CLIENT_ID = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ?? 'ca-pub-3028542923682031'
+export const ADSENSE_SLOT_BANNER = process.env.NEXT_PUBLIC_ADSENSE_SLOT_BANNER ?? ''
