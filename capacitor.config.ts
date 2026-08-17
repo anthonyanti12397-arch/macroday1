@@ -21,6 +21,13 @@ const config: CapacitorConfig = {
     StatusBar: {
       style: 'dark',
       backgroundColor: '#121826'
+    },
+    AdMob: {
+      // Ad-supported model: banners + rewarded video fund the free tier.
+      // Requires GADApplicationIdentifier in ios/App/App/Info.plist and
+      // NSUserTrackingUsageDescription for iOS 14+ ATT.
+      initializeForTesting: false,
+      tagForChildDirectedTreatment: false
     }
   }
 };

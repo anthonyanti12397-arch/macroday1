@@ -57,6 +57,29 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>MacroDay can use Face ID for quick and secure sign-in.</string>
 
+	<!-- Google AdMob — ads fund the free tier.
+	     GADApplicationIdentifier MUST be replaced with your real AdMob app ID
+	     (AdMob console > App settings) before shipping. The value below is
+	     Google's public sample app ID; the app crashes on launch if this key is
+	     missing or malformed. -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
+
+	<!-- App Tracking Transparency — required to request permission for
+	     personalized ads on iOS 14+. Declining still serves (non-personalized) ads. -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>MacroDay uses this to show more relevant ads, which keep the app free to use.</string>
+
+	<!-- SKAdNetwork — lets ad networks measure installs without tracking users.
+	     Google's identifier; add other networks' ids if you enable mediation. -->
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+	</array>
+
 	<!-- UI Configuration -->
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
