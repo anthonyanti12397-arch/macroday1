@@ -1,6 +1,8 @@
 export const FREE_DAILY_LIMIT = 2
-// Free users can earn up to this many extra generations/day by watching rewarded ads.
-export const MAX_AD_REWARDS_PER_DAY = 5
+// Extra generations earnable per day via rewarded ads. Each rewarded view earns
+// roughly 2x what the generation it unlocks costs, so a higher ceiling is safe —
+// it's capped only to bound worst-case API spend if ad fill rate drops.
+export const MAX_AD_REWARDS_PER_DAY = 10
 // Fair-use ceiling for paid users — keeps API cost bounded against abuse while
 // staying high enough to feel unlimited for normal use.
 export const PRO_DAILY_CAP = 20

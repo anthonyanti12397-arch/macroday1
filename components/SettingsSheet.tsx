@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { clearSession, getUserProfile, getGuestSession, saveUserProfile } from '@/lib/storage'
 import { useSession, signOut } from 'next-auth/react'
-import { BETA_MODE } from '@/lib/constants'
+import { BETA_MODE, FREE_DAILY_LIMIT, MAX_AD_REWARDS_PER_DAY } from '@/lib/constants'
 import DonationBox from '@/components/DonationBox'
 import { useLang } from '@/contexts/LangContext'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -209,7 +209,22 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
                 <Row label={s.notifications} icon={Bell} badge={s.comingSoon} />
               </Section>
 
-              {/* ── Pro ──────────────────────────────────────────────── */}
+              {/* ── Ad-supported (no paid tier) ─────────────────────── */}
+              <Section title={lang === 'zh' ? '關於配額' : 'About quota'} icon={Zap}>
+                <div className="mx-4 mb-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-1">
+                    {lang === 'zh' ? 'MacroDay 全功能免費' : 'MacroDay is free, all features'}
+                  </p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    {lang === 'zh'
+                      ? `每日可免費生成 ${FREE_DAILY_LIMIT} 次；用完後看廣告可再獲得配額（每日最多 ${MAX_AD_REWARDS_PER_DAY} 次）。廣告收入用於支付 AI 運算費用。`
+                      : `${FREE_DAILY_LIMIT} free generations daily; watch an ad for more (up to ${MAX_AD_REWARDS_PER_DAY}/day). Ad revenue covers the AI costs.`}
+                  </p>
+                </div>
+              </Section>
+
+              {/* Legacy subscriber cards — only shown to anyone who already pays. */}
+              {(profile?.isPro || profile?.isAdFree) && (
               <Section title={s.proSection} icon={Zap}>
                 {profile?.isPro ? (
                   <div className="mx-4 p-4 rounded-2xl text-white transition-opacity hover:opacity-90 shadow-lg shadow-purple-200 dark:shadow-none mb-4"
@@ -228,66 +243,20 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
                     </p>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => { setShowUpgrade(true); onClose(); }}
-                    className="mx-4 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-between group active:scale-[0.98] transition-all mb-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#7F77DD]/10 flex items-center justify-center text-[#7F77DD]">
-                        <Crown size={20} />
-                      </div>
-                      <div className="text-left">
-                        <div className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-[#7F77DD] transition-colors">
-                          {s.upgradeBtn}
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          {s.upgradeDesc}
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={18} className="text-slate-300 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                )}
-
-                {/* Ad-Free Plan Option */}
-                <div className={`mx-4 p-4 rounded-2xl border transition-all ${
-                  profile?.isAdFree || profile?.isPro 
-                    ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900' 
-                    : 'bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800'
-                }`}>
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="mx-4 p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900 mb-4">
                     <div className="flex items-center gap-2">
-                      <ShieldCheck size={18} className={profile?.isAdFree || profile?.isPro ? 'text-emerald-500' : 'text-slate-400'} />
+                      <ShieldCheck size={18} className="text-emerald-500" />
                       <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
                         {u.adFreeTitle}
                       </span>
-                    </div>
-                    { (profile?.isAdFree || profile?.isPro) ? (
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      <span className="ml-auto text-[10px] font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full">
                         {s.proActive}
                       </span>
-                    ) : (
-                      <button
-                        onClick={async () => {
-                          const res = await fetch('/api/checkout', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ mode: 'adfree' }),
-                          })
-                          const { url } = await res.json()
-                          if (url) window.location.href = url
-                        }}
-                        className="text-[10px] font-bold text-white bg-[#0F9E75] px-2.5 py-1.5 rounded-lg active:scale-95 transition-transform"
-                      >
-                        {u.adFreePrice}
-                      </button>
-                    )}
+                    </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 leading-tight">
-                    {u.adFreeDesc}
-                  </p>
-                </div>
+                )}
               </Section>
+              )}
 
               {/* ── Subscription Management ──────────────────────── */}
               {isAuthenticated && (profile?.isPro || profile?.isAdFree) && (

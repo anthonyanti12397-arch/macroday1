@@ -53,7 +53,7 @@ export default function CommunityPage() {
 
       {[
         { icon: MessageSquare, title: 'Forum', desc: 'Share meals, get replies, and keep streak momentum moving.', href: '/community/forum' },
-        { icon: Trophy, title: 'Leaderboards', desc: 'Next up after the forum foundation is fully in place.', href: '/pricing' },
+        { icon: Trophy, title: 'Leaderboards', desc: 'Next up after the forum foundation is fully in place.', href: '/community/forum' },
       ].map(({ icon: Icon, title, desc, href }) => (
         <Link key={title} href={href} className="card-lg p-5 flex items-center gap-4">
           <div className="w-10 h-10 rounded-2xl bg-[#E8F5F0] flex items-center justify-center shrink-0">

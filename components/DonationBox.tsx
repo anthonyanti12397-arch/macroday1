@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { getGuestSession } from '@/lib/storage'
 import { useSession } from 'next-auth/react'
+import { isAdMobAvailable } from '@/lib/admob'
 
 export default function DonationBox() {
   const { lang } = useLang()
@@ -17,6 +18,11 @@ export default function DonationBox() {
   const [isCustom, setIsCustom] = useState(false)
 
   const amounts = [5, 10, 20]
+
+  // Hide on the native app: an in-app link to an external Stripe payment flow is
+  // an App Store guideline 3.1.1 violation outside the US storefront. Donations
+  // stay available on the web version.
+  if (isAdMobAvailable()) return null
 
   async function handleDonate() {
     const finalAmount = isCustom ? parseFloat(customAmount) : selectedAmount
