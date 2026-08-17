@@ -1,8 +1,21 @@
 import { type NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
+import AppleProvider from 'next-auth/providers/apple'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { verifyOTPToken } from '@/lib/otp'
 import { getUserByEmail, getUserById, resolveOAuthUser, upsertUser } from '@/lib/db'
+
+// Sign in with Apple is required by App Store guideline 4.8 when the app offers
+// a third-party login (Google). Env-gated so local/web dev works without the
+// Apple keys; set APPLE_CLIENT_ID + APPLE_CLIENT_SECRET to enable it.
+// See APPLE_OAUTH_SETUP.md for how to generate these.
+const hasAppleOAuth = !!process.env.APPLE_CLIENT_ID && !!process.env.APPLE_CLIENT_SECRET
+if (!hasAppleOAuth) {
+  console.warn(
+    '[NextAuth] Apple OAuth not configured. Set APPLE_CLIENT_ID and APPLE_CLIENT_SECRET to enable Apple login (required for App Store review).',
+    { hasId: !!process.env.APPLE_CLIENT_ID, hasSecret: !!process.env.APPLE_CLIENT_SECRET }
+  )
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -10,6 +23,12 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
+    ...(hasAppleOAuth
+      ? [AppleProvider({
+          clientId: process.env.APPLE_CLIENT_ID!,
+          clientSecret: process.env.APPLE_CLIENT_SECRET!,
+        })]
+      : []),
     CredentialsProvider({
       id: 'email-otp',
       name: 'Email OTP',
