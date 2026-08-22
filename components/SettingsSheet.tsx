@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import {
   X, LogOut, Globe, Activity, Zap, Bell, Palette,
-  ChevronRight, Crown, User, Check, Sun, Moon, Monitor, ShieldCheck,
+  ChevronRight, Crown, User, Check, Sun, Moon, Monitor, ShieldCheck, Trash2,
 } from 'lucide-react'
 import { clearSession, getUserProfile, getGuestSession, saveUserProfile } from '@/lib/storage'
 import { useSession, signOut } from 'next-auth/react'
@@ -15,6 +15,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import UpgradePrompt from './UpgradePrompt'
 import Logo from './Logo'
 import SubscriptionManager from './SubscriptionManager'
+import { toast } from 'sonner'
 
 interface SettingsSheetProps {
   onClose: () => void
@@ -31,6 +32,33 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
   const guestSession = getGuestSession()
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [logoutConfirm, setLogoutConfirm] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  // App Store guideline 5.1.1(v): an app offering account creation must let the
+  // user delete that account from inside the app. Two-step confirm because this
+  // is irreversible and cascades to every record the user owns.
+  async function handleDeleteAccount() {
+    if (!deleteConfirm) { setDeleteConfirm(true); return }
+
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/user/delete', { method: 'POST' })
+      if (!res.ok) throw new Error('delete failed')
+
+      // Wipe local data so the device keeps nothing after the server delete.
+      try { localStorage.clear() } catch { /* storage unavailable */ }
+      clearSession()
+
+      await signOut({ redirect: false, callbackUrl: '/' })
+      onLogout()
+    } catch (err) {
+      console.error('[Settings] Account deletion failed:', err)
+      toast.error(lang === 'zh' ? '刪除帳號失敗，請稍後再試' : 'Could not delete account. Please try again.')
+      setDeleting(false)
+      setDeleteConfirm(false)
+    }
+  }
 
   async function handleLogout() {
     if (!logoutConfirm) { setLogoutConfirm(true); return }
@@ -106,17 +134,9 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
                       <span className="flex items-center gap-1"><Zap size={11} className="text-yellow-300" /> Beta — All features unlocked</span>
                     ) : isPro ? (
                       <span className="flex items-center gap-1"><Crown size={11} className="text-yellow-300" /> Pro</span>
-                    ) : 'Free plan'}
+                    ) : (lang === 'zh' ? '免費版・廣告支持' : 'Free — ad-supported')}
                   </p>
                 </div>
-                {!isPro && (
-                  <button
-                    onClick={() => setShowUpgrade(true)}
-                    className="shrink-0 text-[11px] font-bold bg-white text-[#0F9E75] px-3 py-1.5 rounded-xl"
-                  >
-                    {s.upgradeBtn}
-                  </button>
-                )}
                 {isPro && (
                   <div className="shrink-0 flex items-center gap-1 text-[11px] font-bold text-yellow-300">
                     <Crown size={13} />
@@ -308,6 +328,46 @@ export default function SettingsSheet({ onClose, onLogout }: SettingsSheetProps)
                   >
                     {s.cancel}
                   </button>
+                )}
+
+                {/* Delete account — required by App Store guideline 5.1.1(v).
+                    Signed-in users only; guests have no server-side account. */}
+                {isAuthenticated && (
+                  <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={deleting}
+                      className={`w-full py-3.5 rounded-2xl text-sm font-bold transition-all disabled:opacity-60 ${
+                        deleteConfirm
+                          ? 'bg-red-600 text-white'
+                          : 'bg-transparent text-slate-400 hover:text-red-500'
+                      }`}
+                    >
+                      <span className="flex items-center justify-center gap-2">
+                        <Trash2 size={15} />
+                        {deleting
+                          ? (lang === 'zh' ? '刪除中…' : 'Deleting…')
+                          : deleteConfirm
+                            ? (lang === 'zh' ? '確認永久刪除帳號' : 'Confirm permanent deletion')
+                            : (lang === 'zh' ? '刪除帳號' : 'Delete account')}
+                      </span>
+                      {deleteConfirm && (
+                        <p className="text-xs font-normal text-white/80 mt-1 px-4 leading-relaxed">
+                          {lang === 'zh'
+                            ? '此動作無法復原。你的所有數據（InBody 記錄、餐單、訓練、社群發文）都會永久刪除。'
+                            : 'This cannot be undone. All your data (InBody records, meal plans, training, posts) will be permanently deleted.'}
+                        </p>
+                      )}
+                    </button>
+                    {deleteConfirm && !deleting && (
+                      <button
+                        onClick={() => setDeleteConfirm(false)}
+                        className="w-full mt-2 text-sm text-slate-400 py-2"
+                      >
+                        {s.cancel}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
