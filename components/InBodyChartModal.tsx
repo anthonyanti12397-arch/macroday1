@@ -19,7 +19,9 @@ interface InBodyChartModalProps {
 }
 
 export default function InBodyChartModal({ records, isPro, onClose, onUpgrade, subjectName, coachView = false }: InBodyChartModalProps) {
-  const unlocked = isPro || coachView
+  // Ad-supported model: progress charts are free for everyone. Kept the prop
+  // so the paywall can return without a rewrite.
+  const unlocked = true
   const dates = records.map((r) => r.date).filter(Boolean).sort()
   const dateRange = dates.length >= 2 ? `${dates[0]} → ${dates[dates.length - 1]}` : dates[0] ?? ''
 

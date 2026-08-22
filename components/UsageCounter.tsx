@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { getTodayUsage } from '@/lib/storage'
 import { FREE_DAILY_LIMIT, BETA_MODE, MAX_AD_REWARDS_PER_DAY } from '@/lib/constants'
-import Link from 'next/link'
 import { Zap, Sparkles, PlayCircle } from 'lucide-react'
 import RewardedAdModal from './RewardedAdModal'
 import { useLang } from '@/contexts/LangContext'
@@ -77,10 +76,10 @@ export default function UsageCounter() {
               {lang === 'zh' ? '看廣告 +1' : 'Watch Ad (+1)'}
             </button>
           )}
-          {atLimit && (
-            <Link href="#upgrade" className="text-[10px] font-bold text-white bg-[#7F77DD] px-2.5 py-1.5 rounded-lg">
-              {lang === 'zh' ? '升級' : 'Upgrade'}
-            </Link>
+          {atLimit && adRewards >= MAX_AD_REWARDS_PER_DAY && (
+            <span className="text-[10px] font-bold text-slate-400 px-2.5 py-1.5">
+              {lang === 'zh' ? '明天重置' : 'Resets tomorrow'}
+            </span>
           )}
         </div>
       </div>
