@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Privacy manifest — required by Apple since May 2024.
+	     Declares what MacroDay collects, whether it tracks, and why it calls
+	     "required reason" APIs. Keep in sync with the App Store Connect privacy
+	     answers and /legal/privacy. -->
+
+	<!-- AdMob serves personalized ads when the user grants ATT permission. -->
+	<key>NSPrivacyTracking</key>
+	<true/>
+
+	<key>NSPrivacyTrackingDomains</key>
+	<array>
+		<string>googleads.g.doubleclick.net</string>
+		<string>pagead2.googlesyndication.com</string>
+	</array>
+
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<!-- Email — account creation and sign-in -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+
+		<!-- Health & fitness — InBody body composition, steps, training -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeHealth</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+
+		<!-- Photos — meal and InBody sheet photos submitted for AI analysis -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePhotosorVideos</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+
+		<!-- Device ID — used by AdMob for advertising -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
+			</array>
+		</dict>
+
+		<!-- Product interaction — ad impressions and feature usage -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+	</array>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<!-- UserDefaults — Capacitor Preferences stores app settings on device -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
